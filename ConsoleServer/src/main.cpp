@@ -26,7 +26,7 @@ std::vector<web::io_base::i_connection*> _connestions;
 std::atomic<int> total_pack = 0;
 std::atomic<int> total_conn = 0;
 
-void fn_on_accepted(web::io_base::i_connection* conn, const SOCKET& socket)
+bool fn_on_accepted(web::io_base::i_connection* conn, const SOCKET& socket)
 {
 	total_conn++;
 	/*{
@@ -50,11 +50,12 @@ void fn_on_accepted(web::io_base::i_connection* conn, const SOCKET& socket)
 		std::lock_guard<std::recursive_mutex> lg(mut_conn);
 		for (auto& i : _connestions)
 			if (i->get_socket() != socket)
-				server->send_packet_async(i, p);
+				server->send(i, p);
 	}*/
+	return true;
 }
 
-void fn_on_recv(web::io_base::i_connection* conn, web::packet::packet_network* packet_nt)
+int fn_on_recv(web::io_base::i_connection* conn, const void* data, int size)
 {
 	total_pack++;
 	//SOCKET sock = conn->get_socket();
@@ -81,19 +82,13 @@ void fn_on_recv(web::io_base::i_connection* conn, web::packet::packet_network* p
 		{
 			std::lock_guard<std::recursive_mutex> lg(mut_conn);
 			for (auto& i : _connestions)
-				server->send_packet_async(i, p);
+				server->send(i, p);
 		}
 	}*/
-}
-void fn_on_send(web::io_base::i_connection* conn, web::packet::packet_network* packet)
-{
-	/*SOCKET sock = conn->get_socket();
 
-	{
-		std::lock_guard<std::mutex> lg(mut_cout);
-		std::cout << current_date_time() << " on_sended to " << sock << ": size " << packet->size << std::endl;
-	}*/
+	return size;
 }
+
 void fn_on_disconnected(web::io_base::i_connection* conn)
 {
 	total_conn--;
@@ -119,7 +114,7 @@ void fn_on_disconnected(web::io_base::i_connection* conn)
 		/*for (auto& i : _connestions)
 			if (i->get_socket() != conn->get_socket())
 			{
-				server->send_packet_async(i, p);
+				server->send(i, p);
 			}*/
 	}
 }
@@ -144,11 +139,10 @@ int main()
 
 	web::io_server::web_server_dll_loader ld(path);
 
-	web::io_server::i_server* server = ld.create_fn(192, 168, 1, 5, 5001);
+	web::io_server::i_server* server = ld.create_fn(127, 0, 0, 1, 5001);
 
 	server->set_on_accepted(fn_on_accepted);
 	server->set_on_recv(fn_on_recv);
-	server->set_on_send(fn_on_send);
 	server->set_on_disconnected(fn_on_disconnected);
 
 	server->run();

@@ -4,6 +4,10 @@
 #include <mutex>
 #pragma warning(disable : 4996)
 
+#include <thread>
+#include <deque>
+#include <queue>
+
 const std::string current_date_time()
 {
 	time_t     now = time(0);
@@ -16,27 +20,25 @@ const std::string current_date_time()
 
 std::mutex _mut_con;
 
-void fn_on_connected(web::io_base::i_connection* conn, const SOCKET& socket)
+bool fn_on_connected(web::io_base::i_connection* conn, const SOCKET& socket)
 {
 	std::lock_guard<std::mutex> lg(_mut_con);
 	std::cout << current_date_time() << " on_connected: socket " << socket << std::endl;
+
+	return true;
 }
-void fn_on_recv(web::io_base::i_connection* conn, web::packet::packet_network* packet_nt)
+
+int fn_on_recv(web::io_base::i_connection* conn, const void* data, int size)
 {
-	if (web::packet::get_packet_type(packet_nt) == web::packet::packet_type::packet_str)
+	/*if (web::packet::get_packet_type(packet_nt) == web::packet::packet_type::packet_str)
 	{
 		auto packet = web::packet::packet_cast<web::packet::packet_str>(packet_nt);
 		std::cout << current_date_time() << " " << packet->str << std::endl;
-	}
-}
-void fn_on_send(web::io_base::i_connection* conn, web::packet::packet_network* packet)
-{
-	//closesocket(*(const SOCKET*)conn);
-	/*if (packet->packet.type == web::web_base::packet_type::str)
-	{
-		std::cout << current_date_time() << " " << (const char*)packet->packet.body << std::endl;
 	}*/
+
+	return size;
 }
+
 void fn_on_disconnected(web::io_base::i_connection* conn)
 {
 	std::cout << current_date_time() << " on_disconnected: server is not available" << std::endl;
@@ -56,15 +58,14 @@ void Clear()
 #endif
 }
 
-#include <thread>
-#include <deque>
-#include <queue>
 
-void thre(web::io_client::i_client* cl, web::packet::packet_str* p)
+
+void thre(web::io_client::i_client* cl, const void* data, int size)
 {
-	for (size_t i = 0; i < 1000000; i++)
+	for (size_t i = 0; i < 100; i++)
 	{
-		cl->send_packet_async(p);
+		if (!cl->send(data, size))
+			std::cout << current_date_time() << " failed to send packet " << i << std::endl;
 	}
 }
 
@@ -86,15 +87,14 @@ int main()
 	if (str.size() > 0)
 	{
 		web::packet::packet_str p(str.c_str());
-		for (size_t i = 0; i < 20; i++)
+		for (size_t i = 0; i < 1; i++)
 		{
-			auto client = ld.create_fn(192, 168, 1, 5, 5001);
+			auto client = ld.create_fn(127, 0, 0, 1, 5001);
 			client->set_on_connected(fn_on_connected);
 			client->set_on_recv(fn_on_recv);
-			client->set_on_send(fn_on_send);
 			client->set_on_disconnected(fn_on_disconnected);
 			client->run();
-			std::thread th(thre, client, &p);
+			std::thread th(thre, client, str.c_str(), strlen(str.c_str()) + sizeof(char));
 			th.detach();
 		}
 	}

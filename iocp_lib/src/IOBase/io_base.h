@@ -19,7 +19,7 @@ namespace web
 
 			void _recv_async(connection* conn);
 			void _send_async(connection* conn);
-			void _send_packet_async(connection* conn, const web_send_task& task);
+			bool _send(connection* conn, const void* data, int size);
 
 			void _worker();
 		public:

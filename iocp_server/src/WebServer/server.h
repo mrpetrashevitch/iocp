@@ -12,6 +12,22 @@ namespace web
 	{
 		class server : public io_server::i_server, public io_base::base
 		{
+		public:
+			server();
+			~server();
+
+			void init(const SOCKADDR_IN& addr);
+
+			void run() override;
+			void detach(io_base::i_connection* conn) override;
+
+			bool send(io_base::i_connection* conn, const void* data, int size) override;
+
+			void set_on_accepted(callback::on_accepted callback) override;
+			void set_on_recv(callback::on_recv callback) override;
+			void set_on_disconnected(callback::on_disconnected callback) override;
+
+		private:
 			bool _inited = false;
 
 			io_base::socket _socket_accept;
@@ -23,25 +39,10 @@ namespace web
 			void _accept();
 
 			callback::on_accepted _on_accepted;
-			void _on_accept(io_base::i_connection* conn, SOCKET& socket);
+			bool _on_accept(io_base::i_connection* conn, SOCKET& socket);
 			callback::on_disconnected _on_disconnected;
 			void _on_disconnect(io_base::i_connection* conn);
-		public:
-			server();
-			~server();
-
-			void init(const SOCKADDR_IN& addr);
-
-			void run() override;
-			void detach(io_base::i_connection* conn) override;
-
-			void send_packet_async(io_base::i_connection* conn, packet::i_packet_network* packet) override;
-			void send_packet_async(io_base::i_connection* conn, const std::shared_ptr<packet::i_packet_network>& packet) override;
-
-			void set_on_accepted(callback::on_accepted callback) override;
-			void set_on_recv(callback::on_recv callback) override;
-			void set_on_send(callback::on_send callback) override;
-			void set_on_disconnected(callback::on_disconnected callback) override;
+		
 		};
 	}
 }

@@ -26,13 +26,11 @@ namespace web
 			void run() override;
 			void detach() override;
 
-			void send_packet_async(packet::i_packet_network* packet) override;
-			void send_packet_async(const std::shared_ptr<packet::i_packet_network>& packet) override;
+			bool send(const void* data, int size) override;
 
-			void set_on_connected(callback::on_connected callback)override;
-			void set_on_recv(callback::on_recv callback)override;
-			void set_on_send(callback::on_send callback)override;
-			void set_on_disconnected(callback::on_disconnected callback)override;
+			void set_on_connected(callback::on_connected callback) override;
+			void set_on_recv(callback::on_recv callback) override;
+			void set_on_disconnected(callback::on_disconnected callback) override;
 		};
 	}
 }

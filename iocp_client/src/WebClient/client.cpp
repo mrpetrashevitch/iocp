@@ -96,30 +96,22 @@ namespace web
 			closesocket(_connection->get_socket());
 		}
 
-		void client::send_packet_async(packet::i_packet_network* packet)
+		bool client::send(const void* data, int size)
 		{
-			if (!_inited) return;
-			_send_packet_async(reinterpret_cast<io_base::connection*>(_connection.get()), { packet });
-		}
-
-		void client::send_packet_async(const std::shared_ptr<packet::i_packet_network>& packet)
-		{
-			if (!_inited) return;
-			_send_packet_async(reinterpret_cast<io_base::connection*>(_connection.get()), { packet });
+			if (!_inited) return false;
+			return _send(reinterpret_cast<io_base::connection*>(_connection.get()), data, size);
 		}
 
 		void client::set_on_connected(callback::on_connected callback)
 		{
 			base::set_on_connected(callback);
 		}
+
 		void client::set_on_recv(callback::on_recv callback)
 		{
 			base::set_on_recv(callback);
 		}
-		void client::set_on_send(callback::on_send callback)
-		{
-			base::set_on_send(callback);
-		}
+
 		void client::set_on_disconnected(callback::on_disconnected callback)
 		{
 			base::set_on_disconnected(callback);

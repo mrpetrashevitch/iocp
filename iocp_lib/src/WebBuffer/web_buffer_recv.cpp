@@ -4,68 +4,69 @@ namespace web
 {
 	namespace io_base
 	{
-		web_buffer_recv::web_buffer_recv(int size) : _is_error(false), _total_recv(0), _total_read(0)
+		web_buffer_recv::web_buffer_recv(int size) : m_is_error(false), m_total_recv(0), m_total_read(0)
 		{
-			if (size < WEB_BASE_PACKET_NETWORK_MAX_SIZE * 2) size = WEB_BASE_PACKET_NETWORK_MAX_SIZE * 2;
+			if (size < web_buffer_recv_min_size)
+				size = web_buffer_recv_min_size;
 
-			_buff_size = size;
-			_buff = new byte[_buff_size];
-			_wsa = { (unsigned long)(_buff_size - _total_recv),(CHAR*)&_buff[_total_recv] };
+			m_buff_size = size;
+			m_buff = new byte[m_buff_size];
+			m_wsa = { (unsigned long)(m_buff_size - m_total_recv), (CHAR*)&m_buff[m_total_recv] };
 		}
-		bool web_buffer_recv::move(int len)
+
+		bool web_buffer_recv::add_total_recv(int len)
 		{
-			if (len + _total_recv > _buff_size)
+			if (len + m_total_recv > m_buff_size)
+			{
+				m_is_error = true;
 				return false;
-			_total_recv += len;
+			}
+			m_total_recv += len;
 			return true;
 		}
-		packet::packet_network* web_buffer_recv::get_packet()
+
+		bool web_buffer_recv::add_total_read(int len)
 		{
-			int read_can = _total_recv - _total_read;
-
-			if (read_can < sizeof(int_net))
+			if (len + m_total_read > m_total_recv)
 			{
-				if (_buff_size == _total_recv)
-				{
-					int size_copy = _buff_size - _total_read;
-					if (size_copy) memcpy(_buff, &_buff[_total_read], size_copy);
-					_total_recv = size_copy;
-					_total_read = 0;
-				}
-				return nullptr;
+				m_is_error = true;
+				return false;
 			}
+			m_total_read += len;
+			return true;
+		}
 
-			int_net size_p = *(int_net*)&_buff[_total_read];
-			if (size_p > WEB_BASE_PACKET_MAX_SIZE) { _is_error = true;  return nullptr; }
-			read_can -= sizeof(int_net);
+		const void* web_buffer_recv::get_curr_buffer()
+		{
+			return reinterpret_cast<const void*>(&m_buff[m_total_read]);
+		}
 
-			if (size_p > read_can)
+		int web_buffer_recv::get_cerr_buffer_size()
+		{
+			return m_total_recv - m_total_read;
+		}
+
+		void web_buffer_recv::fit()
+		{
+			if (m_buff_size == m_total_recv)
 			{
-				if (_buff_size == _total_recv)
-				{
-					int size_copy = _buff_size - _total_read;
-					if (size_copy) memcpy(_buff, &_buff[_total_read], size_copy);
-					_total_recv = size_copy;
-					_total_read = 0;
-				}
-				return nullptr;
+				int size_copy = m_buff_size - m_total_read;
+				if (size_copy > 0) 
+					memcpy(m_buff, &m_buff[m_total_read], size_copy);
+				m_total_recv = size_copy;
+				m_total_read = 0;
 			}
-
-			packet::packet_network* packet = (packet::packet_network*)&_buff[_total_read];
-			_total_read += sizeof(int_net);
-			_total_read += size_p;
-			return packet;
 		}
 
 		bool web_buffer_recv::is_error()
 		{
-			return _is_error;
+			return m_is_error;
 		}
 
 		WSABUF* web_buffer_recv::get_wsabuf()
 		{
-			_wsa = { (unsigned long)(_buff_size - _total_recv),(CHAR*)&_buff[_total_recv] };
-			return &_wsa;
+			m_wsa = { (unsigned long)(m_buff_size - m_total_recv), (CHAR*)&m_buff[m_total_recv] };
+			return &m_wsa;
 		}
 	}
 }

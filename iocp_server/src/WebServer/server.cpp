@@ -55,15 +55,19 @@ namespace web
 			}
 		}
 
-		void server::_on_accept(io_base::i_connection* conn, SOCKET& socket)
+		bool server::_on_accept(io_base::i_connection* conn, SOCKET& socket)
 		{
 			_accept(); // next accept
-			if (_on_accepted)_on_accepted(conn, socket);
+
+			if (_on_accepted) 
+				return _on_accepted(conn, socket);
+			return true;
 		}
 
 		void server::_on_disconnect(io_base::i_connection* conn)
 		{
-			if (_on_disconnected) _on_disconnected(conn);
+			if (_on_disconnected) 
+				_on_disconnected(conn);
 
 			{
 				std::lock_guard<std::mutex> lg(_mut_v);
@@ -127,30 +131,22 @@ namespace web
 			closesocket(conn->get_socket());
 		}
 
-		void server::send_packet_async(io_base::i_connection* conn, packet::i_packet_network* packet)
+		bool server::send(io_base::i_connection* conn, const void* data, int size)
 		{
-			if (!_inited) return;
-			_send_packet_async(reinterpret_cast<io_base::connection*>(conn), { packet });
-		}
-
-		void server::send_packet_async(io_base::i_connection* conn, const std::shared_ptr<packet::i_packet_network>& packet)
-		{
-			if (!_inited) return;
-			_send_packet_async(reinterpret_cast<io_base::connection*>(conn), { packet });
+			if (!_inited) return false;
+			return _send(reinterpret_cast<io_base::connection*>(conn), data, size);
 		}
 
 		void server::set_on_accepted(callback::on_accepted callback)
 		{
 			_on_accepted = callback;
 		}
+
 		void server::set_on_recv(callback::on_recv callback)
 		{
 			base::set_on_recv(callback);
 		}
-		void server::set_on_send(callback::on_send callback)
-		{
-			base::set_on_send(callback);
-		}
+
 		void server::set_on_disconnected(callback::on_disconnected callback)
 		{
 			_on_disconnected = callback;

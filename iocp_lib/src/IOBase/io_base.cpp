@@ -35,16 +35,29 @@ namespace web
 			WSASend(conn->get_socket(), conn->send_overlapped.buffer.get_wsabuf(), 1, &bytes, 0, &conn->send_overlapped.overlapped, 0);
 		}
 
-		void base::_send_packet_async(connection* conn, const web_send_task& task)
+		bool base::_send(connection* conn, const void* data, int size)
 		{
 			web_buffer_send& buffer = conn->send_overlapped.buffer;
-			bool empty = false;
+			bool error = true;
+			bool empty = true;
 			{
 				std::lock_guard<web_buffer_send> lg(buffer);
 				empty = buffer.empty();
-				buffer.push(task);
+				error = !buffer.add_data(data, size);
 			}
-			if (empty)_send_async(conn);
+
+			if (error)
+				return false;
+
+			if (empty)
+				_send_async(conn);
+			return true;
+		}
+
+		void terminate_connection(connection* conn)
+		{
+			shutdown(conn->get_socket(), SD_BOTH);
+			closesocket(conn->get_socket());
 		}
 
 		void base::_worker()
@@ -60,6 +73,7 @@ namespace web
 				{
 					success = GetQueuedCompletionStatus(_iocp, &bytes_transferred, &completion_key, reinterpret_cast<LPOVERLAPPED*>(&overlapped), INFINITE);
 
+					// terminate flag
 					if (completion_key == 1)
 					{
 						break;
@@ -67,7 +81,8 @@ namespace web
 
 					if (!success)
 					{
-						if (on_disconnected)on_disconnected(overlapped->connection);
+						if (on_disconnected)
+							on_disconnected(overlapped->connection);
 						continue;
 					}
 
@@ -75,7 +90,11 @@ namespace web
 					{
 						overlapped->connection->set_addr(*(sockaddr_in*)&overlapped->connection->accept_overlapped.buffer[38]);
 
-						if (on_accepted) on_accepted(overlapped->connection, overlapped->connection->get_socket());
+						if (on_accepted)
+						{
+							if (!on_accepted(overlapped->connection, overlapped->connection->get_socket()))
+								terminate_connection(overlapped->connection);
+						}
 
 						// start recv packets
 						_recv_async(overlapped->connection);
@@ -84,7 +103,8 @@ namespace web
 
 					if (overlapped->type == overlapped_type::connect)
 					{
-						if (on_connected) on_connected(overlapped->connection, overlapped->connection->get_socket());
+						if (on_connected)
+							on_connected(overlapped->connection, overlapped->connection->get_socket());
 
 						// start recv packets
 						_recv_async(overlapped->connection);
@@ -93,29 +113,46 @@ namespace web
 
 					if (bytes_transferred == 0)
 					{
-						if (on_disconnected)on_disconnected(overlapped->connection);
+						if (on_disconnected)
+							on_disconnected(overlapped->connection);
 						continue;
 					}
 
 					if (overlapped->type == overlapped_type::recv)
 					{
 						auto& over = overlapped->connection->recv_overlapped;
-						if (over.buffer.move(bytes_transferred))
+						if (over.buffer.add_total_recv(bytes_transferred))
 						{
-							while (web::packet::packet_network* pack = over.buffer.get_packet())
+							while (42)
 							{
+								auto buff = over.buffer.get_curr_buffer();
+								auto size = over.buffer.get_cerr_buffer_size();
+
+								if (!size)
+									break;
+
 								if (on_recv)
-									on_recv(overlapped->connection, pack);
+									size = on_recv(overlapped->connection, buff, size);
+
+								if (!over.buffer.add_total_read(size))
+								{
+									break;
+								}
 							}
 
 							if (!over.buffer.is_error())
+							{
+								over.buffer.fit();
 								_recv_async(overlapped->connection);
+							}
 							else
-								closesocket(overlapped->connection->get_socket());
+							{
+								terminate_connection(overlapped->connection);
+							}
 						}
 						else
 						{
-							closesocket(overlapped->connection->get_socket());
+							terminate_connection(overlapped->connection);
 						}
 						continue;
 					}
@@ -124,20 +161,22 @@ namespace web
 					{
 						auto& over = overlapped->connection->send_overlapped;
 
-						if (over.buffer.move(bytes_transferred))
+						bool error = true;
+						bool empty = true;
 						{
-							if (on_send)
-								on_send(overlapped->connection, over.buffer.get_packet());
-							bool empty = true;
-							{
-								std::lock_guard<web_buffer_send> lg(over.buffer);
-								over.buffer.pop();
-								empty = over.buffer.empty();
-							}
-							if (!empty) _send_async(overlapped->connection);
+							std::lock_guard<web_buffer_send> lg(over.buffer);
+							error = !over.buffer.add_total_send(bytes_transferred);
+							empty = over.buffer.empty();
 						}
-						else
+
+						if (error)
+						{
+							terminate_connection(overlapped->connection);
+						}
+						else if (!empty)
+						{
 							_send_async(overlapped->connection);
+						}
 						continue;
 					}
 

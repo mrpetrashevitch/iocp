@@ -1,25 +1,31 @@
 #pragma once
-#include "../Packets/i_packet_network.h"
 #include "winsock2.h" // WSABUF
 
 namespace web
 {
 	namespace io_base
 	{
+
+		constexpr int web_buffer_recv_min_size = 512;
+
 		class web_buffer_recv
 		{
-			bool _is_error;
-			byte* _buff;
-			int _buff_size;
-			int _total_recv;
-			int _total_read;
-			WSABUF _wsa;
 		public:
-			web_buffer_recv(int size = 0);
-			bool move(int len);
+			web_buffer_recv(int size = web_buffer_recv_min_size);
+			bool add_total_recv(int len);
+			bool add_total_read(int len);
+			const void* get_curr_buffer();
+			int get_cerr_buffer_size();
+			void fit();
 			bool is_error();
-			packet::packet_network* get_packet();
 			WSABUF* get_wsabuf();
+		private:
+			bool m_is_error;
+			byte* m_buff;
+			int m_buff_size;
+			int m_total_recv;
+			int m_total_read;
+			WSABUF m_wsa;
 		};
 	}
 }
