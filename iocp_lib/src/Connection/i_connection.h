@@ -11,7 +11,6 @@ namespace web
 			virtual void* get_owner() = 0;
 			virtual SOCKET& get_socket() = 0;
 			virtual SOCKADDR_IN& get_addr() = 0;
-			virtual int get_ping() = 0;
 		};
 	}
 }

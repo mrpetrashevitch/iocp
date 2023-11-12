@@ -1,23 +1,15 @@
 #pragma once
-#include "i_callback.h"
+#include "../Connection/i_connection.h"
+
+#include <functional> // std::function
 
 namespace web
 {
-		namespace callback
-		{
-			class callbacks_holder
-			{
-			protected:
-				on_accepted on_accepted;
-				on_connected on_connected;
-				on_recv on_recv;
-				on_disconnected on_disconnected;
-			public:
-				void set_on_accepted(callback::on_accepted callback);
-				void set_on_connected(callback::on_connected callback);
-				void set_on_recv(callback::on_recv callback);
-				void set_on_disconnected(callback::on_disconnected callback);
-				virtual ~callbacks_holder() {}
-			};
-		}
+	namespace callback
+	{
+		typedef std::function<bool(io_base::i_connection* conn, SOCKET& socket)> on_accepted;
+		typedef std::function<void(io_base::i_connection* conn, SOCKET& socket)> on_connected;
+		typedef std::function<int(io_base::i_connection* conn, const void* buff, int size)> on_recv;
+		typedef std::function<void(io_base::i_connection* conn)> on_disconnected;
+	}
 }

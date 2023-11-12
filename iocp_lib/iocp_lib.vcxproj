@@ -171,8 +171,7 @@
     </Lib>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="src\Packets\packets.cpp" />
-    <ClCompile Include="src\CallBack\callback.cpp" />
+    <ClCompile Include="src\CallBack\callbacks_holder.cpp" />
     <ClCompile Include="src\Connection\connection.cpp" />
     <ClCompile Include="src\mainlib.cpp" />
     <ClCompile Include="src\Socket\socket.cpp" />
@@ -182,17 +181,13 @@
     <ClCompile Include="src\IOBase\io_base.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\CallBack\i_callback.h" />
+    <ClInclude Include="src\CallBack\callback.h" />
     <ClInclude Include="src\Connection\i_connection.h" />
     <ClInclude Include="src\Containers\safe_queue.h" />
     <ClInclude Include="src\IOBase\i_client.h" />
     <ClInclude Include="src\IOBase\i_server.h" />
-    <ClInclude Include="src\Lock\lockers.h" />
-    <ClInclude Include="src\Packets\i_packet_network.h" />
-    <ClInclude Include="src\Packets\packets.h" />
-    <ClInclude Include="src\CallBack\callback.h" />
+    <ClInclude Include="src\CallBack\callbacks_holder.h" />
     <ClInclude Include="src\Connection\connection.h" />
-    <ClInclude Include="src\Cryptor\i_cryptor.h" />
     <ClInclude Include="src\defs.h" />
     <ClInclude Include="src\Socket\socket.h" />
     <ClInclude Include="src\Thread\thread.h" />

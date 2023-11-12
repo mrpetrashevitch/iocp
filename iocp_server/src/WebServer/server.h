@@ -38,6 +38,8 @@ namespace web
 
 			void _accept();
 
+			void _disconnect();
+
 			callback::on_accepted _on_accepted;
 			bool _on_accept(io_base::i_connection* conn, SOCKET& socket);
 			callback::on_disconnected _on_disconnected;

@@ -11,27 +11,48 @@ namespace web
 {
 	namespace io_client
 	{
-		void client::_connect()
+		bool wsa_connectex(_In_ SOCKET s,
+			_In_reads_bytes_(namelen) const struct sockaddr FAR* name,
+			_In_ int namelen,
+			_In_reads_bytes_opt_(dwSendDataLength) PVOID lpSendBuffer,
+			_In_ DWORD dwSendDataLength,
+			_Out_ LPDWORD lpdwBytesSent,
+			_Inout_ LPOVERLAPPED lpOverlapped)
 		{
 			static LPFN_CONNECTEX connectx_func = nullptr;
 			if (!connectx_func)
 			{
 				GUID acceptex_guid = WSAID_CONNECTEX;
 				DWORD bytes_returned;
-				WSAIoctl(_socket_connect.get_socket(),
+				if (WSAIoctl(s,
 					SIO_GET_EXTENSION_FUNCTION_POINTER,
 					&acceptex_guid,
 					sizeof(acceptex_guid),
 					&connectx_func,
 					sizeof(connectx_func),
-					&bytes_returned, NULL, NULL);
+					&bytes_returned, NULL, NULL))
+					return false;
 			}
 
-			DWORD bytes = 0;
+			const int result = connectx_func
+			(
+				s,
+				name,
+				namelen,
+				lpSendBuffer,
+				dwSendDataLength,
+				lpdwBytesSent,
+				lpOverlapped
+			);
+			return result == TRUE || WSAGetLastError() == WSA_IO_PENDING;
+		}
 
+		void client::_connect()
+		{
 			std::unique_ptr<io_base::connection> conn(std::make_unique<io_base::connection>(_socket_connect.get_socket(), this));
 			auto& addr = _socket_connect.get_socket_address();
-			const int connect_ex_result = connectx_func
+			DWORD bytes = 0;
+			const int connect_ex_result = wsa_connectex
 			(
 				_socket_connect.get_socket(),
 				(SOCKADDR*)&addr,
@@ -64,7 +85,7 @@ namespace web
 
 			_iocp = ::CreateIoCompletionPort(INVALID_HANDLE_VALUE, nullptr, 0, thread_count);
 			_socket_connect.init(addr);
-			CreateIoCompletionPort(reinterpret_cast<HANDLE>(_socket_connect.get_socket()), _iocp, 0, 0);
+			CreateIoCompletionPort(reinterpret_cast<HANDLE>(_socket_connect.get_socket()), _iocp, static_cast<ULONG_PTR>(io_base::completion_key::io), 0);
 
 			_socket_connect.bind_before_connect();
 
@@ -74,7 +95,7 @@ namespace web
 				_worker_thread->set_func(std::bind(&client::_worker, this));
 				_worker_thread->set_exit([this]
 					{
-						PostQueuedCompletionStatus(_iocp, 0, 1, nullptr);
+						PostQueuedCompletionStatus(_iocp, 0, static_cast<ULONG_PTR>(io_base::completion_key::shutdown), nullptr);
 					}
 				);
 				_threads.push_back(std::move(_worker_thread));
