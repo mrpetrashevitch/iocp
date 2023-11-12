@@ -12,23 +12,49 @@ namespace web
 {
 	namespace io_server
 	{
-		void server::_accept()
+		bool wsa_acceptex(
+			_In_ SOCKET sListenSocket,
+			_In_ SOCKET sAcceptSocket,
+			_Out_writes_bytes_(dwReceiveDataLength + dwLocalAddressLength + dwRemoteAddressLength) PVOID lpOutputBuffer,
+			_In_ DWORD dwReceiveDataLength,
+			_In_ DWORD dwLocalAddressLength,
+			_In_ DWORD dwRemoteAddressLength,
+			_Out_ LPDWORD lpdwBytesReceived,
+			_Inout_ LPOVERLAPPED lpOverlapped)
 		{
 			static LPFN_ACCEPTEX acceptex_func = nullptr;
 			if (!acceptex_func)
 			{
 				GUID acceptex_guid = WSAID_ACCEPTEX;
 				DWORD bytes_returned;
-				WSAIoctl(_socket_accept.get_socket(),
+				if (WSAIoctl(sListenSocket,
 					SIO_GET_EXTENSION_FUNCTION_POINTER,
 					&acceptex_guid,
 					sizeof(acceptex_guid),
 					&acceptex_func,
 					sizeof(acceptex_func),
-					&bytes_returned, NULL, NULL);
+					&bytes_returned, NULL, NULL))
+					return false;
 			}
 
-			SOCKET accepted_socket = ::socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+			const int result = acceptex_func
+			(
+				sListenSocket,
+				sAcceptSocket,
+				lpOutputBuffer,
+				dwReceiveDataLength,
+				dwLocalAddressLength, 
+				dwRemoteAddressLength,
+				lpdwBytesReceived, 
+				lpOverlapped
+			);
+
+			return result == TRUE || WSAGetLastError() == WSA_IO_PENDING;
+		}
+
+		void server::_accept()
+		{
+			SOCKET accepted_socket = WSASocket(AF_INET, SOCK_STREAM, IPPROTO_TCP, nullptr, 0, WSA_FLAG_OVERLAPPED);
 
 			// disble send buffering
 			int opt = 0;
@@ -38,7 +64,7 @@ namespace web
 
 			std::unique_ptr<io_base::connection> connection_(std::make_unique<io_base::connection>(accepted_socket, this));
 
-			const int accept_ex_result = acceptex_func
+			const int accept_ex_result = wsa_acceptex
 			(
 				_socket_accept.get_socket(),
 				accepted_socket,
@@ -47,7 +73,8 @@ namespace web
 				sizeof(sockaddr_in) + 16, sizeof(sockaddr_in) + 16,
 				&bytes, reinterpret_cast<LPOVERLAPPED>(&connection_->accept_overlapped.overlapped)
 			);
-			CreateIoCompletionPort(reinterpret_cast<HANDLE>(accepted_socket), _iocp, 0, 0);
+			
+			CreateIoCompletionPort(reinterpret_cast<HANDLE>(accepted_socket), _iocp, static_cast<ULONG_PTR>(io_base::completion_key::io), 0);
 
 			{
 				std::lock_guard<std::mutex> lg(_mut_v);
@@ -58,6 +85,12 @@ namespace web
 		bool server::_on_accept(io_base::i_connection* conn, SOCKET& socket)
 		{
 			_accept(); // next accept
+
+			// only TCP
+			/*int opt_on = 1;
+			if (setsockopt(socket, SOL_SOCKET, SO_KEEPALIVE, (char*)&opt_on, sizeof(opt_on)) == SOCKET_ERROR) {
+				return false;
+			}*/
 
 			if (_on_accepted) 
 				return _on_accepted(conn, socket);
@@ -110,7 +143,7 @@ namespace web
 				_worker_thread->set_func(std::bind(&server::_worker, this));
 				_worker_thread->set_exit([this]
 					{
-						PostQueuedCompletionStatus(_iocp, 0, 1, nullptr);
+						PostQueuedCompletionStatus(_iocp, 0, static_cast<ULONG_PTR>(io_base::completion_key::shutdown), nullptr);
 					}
 				);
 				_threads.push_back(std::move(_worker_thread));

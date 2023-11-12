@@ -9,11 +9,13 @@ namespace web
 	namespace io_base
 	{
 		class connection;
+
 		enum class overlapped_type
 		{
 			nun,
-			accept,
 			connect,
+			disconnect,
+			accept,
 			recv,
 			send,
 		};
@@ -31,10 +33,15 @@ namespace web
 			overlapped_connect() { type = overlapped_type::connect; }
 		};
 
+		struct overlapped_disconnect : public overlapped_base
+		{
+			overlapped_disconnect() { type = overlapped_type::disconnect; }
+		};
+
 		struct overlapped_accept : public overlapped_base
 		{
-			overlapped_accept() { type = overlapped_type::accept; memset(buffer, 0, sizeof(buffer)); }
-			byte buffer[(sizeof(sockaddr_in) + 16) * 2];
+			overlapped_accept() { type = overlapped_type::accept; }
+			byte buffer[(sizeof(sockaddr_in) + 16) * 2] {0};
 		};
 
 		struct overlapped_recv : public overlapped_base
@@ -51,12 +58,9 @@ namespace web
 
 		class connection : public i_connection
 		{
-			void* _owner;
-			SOCKET _socket;
-			SOCKADDR_IN _addr;
-			HANDLE _icmp_handle;
 		public:
 			overlapped_connect connect_overlapped;
+			overlapped_disconnect disconnect_overlapped;
 			overlapped_accept accept_overlapped;
 			overlapped_recv recv_overlapped;
 			overlapped_send send_overlapped;
@@ -67,7 +71,11 @@ namespace web
 			SOCKET& get_socket() override;
 			void set_addr(const SOCKADDR_IN& addr);
 			SOCKADDR_IN& get_addr() override;
-			int get_ping() override;
+
+		private:
+			void* m_owner;
+			SOCKET m_socket;
+			SOCKADDR_IN m_addr;
 		};
 	}
 }

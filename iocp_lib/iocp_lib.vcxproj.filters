@@ -21,13 +21,10 @@
     <ClCompile Include="src\Connection\connection.cpp">
       <Filter>Исходные файлы</Filter>
     </ClCompile>
-    <ClCompile Include="src\CallBack\callback.cpp">
+    <ClCompile Include="src\CallBack\callbacks_holder.cpp">
       <Filter>Исходные файлы</Filter>
     </ClCompile>
     <ClCompile Include="src\Thread\thread.cpp">
-      <Filter>Исходные файлы</Filter>
-    </ClCompile>
-    <ClCompile Include="src\Packets\packets.cpp">
       <Filter>Исходные файлы</Filter>
     </ClCompile>
     <ClCompile Include="src\WebBuffer\web_buffer_recv.cpp">
@@ -44,22 +41,16 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\Cryptor\i_cryptor.h">
-      <Filter>Файлы заголовков</Filter>
-    </ClInclude>
     <ClInclude Include="src\defs.h">
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
     <ClInclude Include="src\Connection\connection.h">
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
-    <ClInclude Include="src\CallBack\callback.h">
+    <ClInclude Include="src\CallBack\callbacks_holder.h">
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
     <ClInclude Include="src\Thread\thread.h">
-      <Filter>Файлы заголовков</Filter>
-    </ClInclude>
-    <ClInclude Include="src\Packets\packets.h">
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
     <ClInclude Include="src\WebBuffer\web_buffer_recv.h">
@@ -77,10 +68,7 @@
     <ClInclude Include="src\Socket\socket.h">
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
-    <ClInclude Include="src\Lock\lockers.h">
-      <Filter>Файлы заголовков</Filter>
-    </ClInclude>
-    <ClInclude Include="src\CallBack\i_callback.h">
+    <ClInclude Include="src\CallBack\callback.h">
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
     <ClInclude Include="src\Connection\i_connection.h">
@@ -90,9 +78,6 @@
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
     <ClInclude Include="src\IOBase\i_client.h">
-      <Filter>Файлы заголовков</Filter>
-    </ClInclude>
-    <ClInclude Include="src\Packets\i_packet_network.h">
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
   </ItemGroup>

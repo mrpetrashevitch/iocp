@@ -1,7 +1,7 @@
 #pragma once
 #include "../defs.h"
 #include "../Connection/connection.h"
-#include "../CallBack/callback.h"
+#include "../CallBack/callbacks_holder.h"
 
 #include <Windows.h>
 
@@ -10,6 +10,11 @@ namespace web
 {
 	namespace io_base
 	{
+		enum class completion_key {
+			io,
+			shutdown
+		};
+
 		class base : public web::callback::callbacks_holder
 		{
 		protected:
@@ -17,8 +22,14 @@ namespace web
 
 			bool _wsa_init();
 
-			void _recv_async(connection* conn);
-			void _send_async(connection* conn);
+			void accept_handler(connection* conn);
+			void connect_handler(connection* conn);
+			void recv_handler(connection* conn, DWORD bytes_transferred);
+			void send_handler(connection* conn, DWORD bytes_transferred);
+			void disconnect_handler(connection* conn);
+
+			bool _recv_async(connection* conn);
+			bool _send_async(connection* conn);
 			bool _send(connection* conn, const void* data, int size);
 
 			void _worker();

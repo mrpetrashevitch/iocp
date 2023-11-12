@@ -25,6 +25,7 @@ bool fn_on_connected(web::io_base::i_connection* conn, const SOCKET& socket)
 	std::lock_guard<std::mutex> lg(_mut_con);
 	std::cout << current_date_time() << " on_connected: socket " << socket << std::endl;
 
+	// closesocket(conn->get_socket());
 	return true;
 }
 
@@ -58,15 +59,19 @@ void Clear()
 #endif
 }
 
-
-
-void thre(web::io_client::i_client* cl, const void* data, int size)
+void thre(web::io_client::i_client* cl, int threadid, const void* data, int size)
 {
-	for (size_t i = 0; i < 100; i++)
+	ULONG64 total_send = 0;
+	for (size_t i = 0; i < 1; i++)
 	{
 		if (!cl->send(data, size))
-			std::cout << current_date_time() << " failed to send packet " << i << std::endl;
+			std::cout << "[" << threadid << "]" << current_date_time() << " failed to send packet " << i << std::endl;
+		else
+			total_send += size;
 	}
+
+	
+	std::cout << "[" << threadid << "]" << current_date_time() << " total send " << total_send << std::endl;
 }
 
 int main()
@@ -86,7 +91,6 @@ int main()
 
 	if (str.size() > 0)
 	{
-		web::packet::packet_str p(str.c_str());
 		for (size_t i = 0; i < 1; i++)
 		{
 			auto client = ld.create_fn(127, 0, 0, 1, 5001);
@@ -94,7 +98,7 @@ int main()
 			client->set_on_recv(fn_on_recv);
 			client->set_on_disconnected(fn_on_disconnected);
 			client->run();
-			std::thread th(thre, client, str.c_str(), strlen(str.c_str()) + sizeof(char));
+			std::thread th(thre, client, i, str.c_str(), strlen(str.c_str()) + sizeof(char));
 			th.detach();
 		}
 	}
