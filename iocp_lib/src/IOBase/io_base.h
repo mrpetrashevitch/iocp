@@ -5,7 +5,6 @@
 
 #include <Windows.h>
 
-
 namespace web
 {
 	namespace io_base
@@ -33,9 +32,8 @@ namespace web
 			void send_handler(connection* conn, DWORD bytes_transferred);
 			void disconnect_handler(connection* conn);
 
-			bool _recv_async(connection* conn);
-			bool _send_async(connection* conn);
-			bool _send(connection* conn, const void* data, int size);
+			
+			
 
 			void _worker();
 		

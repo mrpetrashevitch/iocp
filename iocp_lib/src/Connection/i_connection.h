@@ -1,6 +1,7 @@
 #pragma once
 #include "../defs.h"
-#include "winsock2.h" // SOCKET, SOCKADDR_IN
+//#include "winsock2.h" // SOCKET, SOCKADDR_IN
+#include <string>
 
 namespace web
 {
@@ -8,9 +9,10 @@ namespace web
 	{
 		struct i_connection
 		{
-			virtual void* get_owner() = 0;
-			virtual SOCKET& get_socket() = 0;
-			virtual SOCKADDR_IN& get_addr() = 0;
+			virtual int get_id() = 0;
+			virtual const std::string& get_addr() = 0;
+			virtual bool send_async(const void* data, int size) = 0;
+			virtual bool disconnect_async() = 0;
 		};
 	}
 }

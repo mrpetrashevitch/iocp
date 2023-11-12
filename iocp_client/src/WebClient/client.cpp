@@ -49,7 +49,9 @@ namespace web
 
 		void client::_connect()
 		{
-			std::unique_ptr<io_base::connection> conn(std::make_unique<io_base::connection>(_socket_connect.get_socket(), this));
+			std::shared_ptr<io_base::connection> conn(std::make_unique<io_base::connection>(_socket_connect.get_socket(), 0));
+			conn->self_lock(conn);
+
 			auto& addr = _socket_connect.get_socket_address();
 			DWORD bytes = 0;
 			const int connect_ex_result = wsa_connectex
@@ -74,7 +76,7 @@ namespace web
 		{
 			_inited = false;
 			_threads.clear();
-			_connection.reset(nullptr);
+			_connection = nullptr;
 		}
 
 		void client::init(const SOCKADDR_IN& addr)
@@ -110,17 +112,16 @@ namespace web
 			_connect();
 		}
 
-
-		void client::detach()
+		bool client::send_async(const void* data, int size)
 		{
-			if (!_inited) return;
-			closesocket(_connection->get_socket());
+			if (!_connection) return false;
+			return _connection->send_async(data, size);
 		}
 
-		bool client::send(const void* data, int size)
+		bool client::disconnect_async()
 		{
-			if (!_inited) return false;
-			return _send(reinterpret_cast<io_base::connection*>(_connection.get()), data, size);
+			if (!_connection) return false;
+			return _connection->disconnect_async();
 		}
 
 		void client::set_on_connected(callback::on_connected callback)

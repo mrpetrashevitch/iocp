@@ -19,9 +19,6 @@ namespace web
 			void init(const SOCKADDR_IN& addr);
 
 			void run() override;
-			void detach(io_base::i_connection* conn) override;
-
-			bool send(io_base::i_connection* conn, const void* data, int size) override;
 
 			void set_on_accepted(callback::on_accepted callback) override;
 			void set_on_recv(callback::on_recv callback) override;
@@ -30,18 +27,18 @@ namespace web
 		private:
 			bool _inited = false;
 
+			std::atomic_int m_connection_counter = 0;
+
 			io_base::socket _socket_accept;
 			std::vector<std::unique_ptr<thread::thread>> _threads;
 
 			std::mutex _mut_v;
-			std::vector<std::unique_ptr<io_base::connection>> _connections;
+			std::vector<std::shared_ptr<io_base::connection>> _connections;
 
 			void _accept();
 
-			void _disconnect();
-
 			callback::on_accepted _on_accepted;
-			bool _on_accept(io_base::i_connection* conn, SOCKET& socket);
+			bool _on_accept(io_base::i_connection* conn);
 			callback::on_disconnected _on_disconnected;
 			void _on_disconnect(io_base::i_connection* conn);
 		

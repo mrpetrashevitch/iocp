@@ -11,9 +11,9 @@ namespace web
 		{
 			virtual ~i_client() {};
 			virtual void run() = 0;
-			virtual void detach() = 0;
 
-			virtual bool send(const void* data, int size) = 0;
+			virtual bool send_async(const void* data, int size) = 0;
+			virtual bool disconnect_async() = 0;
 
 			virtual void set_on_connected(callback::on_connected callback) = 0;
 			virtual void set_on_recv(callback::on_recv callback) = 0;

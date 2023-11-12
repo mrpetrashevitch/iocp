@@ -3,6 +3,8 @@
 #include "../WebBuffer/web_buffer_recv.h"
 #include "../WebBuffer/web_buffer_send.h"
 
+#include <memory>
+#include <atomic>
 
 namespace web
 {
@@ -22,10 +24,10 @@ namespace web
 
 		struct overlapped_base
 		{
-			overlapped_base() : connection(nullptr), type(overlapped_type::nun) { memset(&overlapped, 0, sizeof(OVERLAPPED)); }
+			overlapped_base() : conn(nullptr), type(overlapped_type::nun) { memset(&overlapped, 0, sizeof(OVERLAPPED)); }
 			OVERLAPPED overlapped;
 			overlapped_type type;
-			connection* connection;
+			connection* conn;
 		};
 
 		struct overlapped_connect : public overlapped_base
@@ -65,17 +67,27 @@ namespace web
 			overlapped_recv recv_overlapped;
 			overlapped_send send_overlapped;
 
-			connection(SOCKET socket, void* owner);
+			connection(SOCKET socket, int id);
 			~connection();
-			void* get_owner();
-			SOCKET& get_socket() override;
+			SOCKET& get_socket();
 			void set_addr(const SOCKADDR_IN& addr);
-			SOCKADDR_IN& get_addr() override;
+			bool _recv_async();
+			bool _send_async();
+			void self_lock(std::shared_ptr<connection> conn);
+			void self_unlock();
+			std::shared_ptr<connection> get();
+
+			int get_id() override;
+			const std::string& get_addr() override;
+			bool send_async(const void* data, int size) override;
+			bool disconnect_async() override;
 
 		private:
-			void* m_owner;
+			int m_id;
 			SOCKET m_socket;
 			SOCKADDR_IN m_addr;
+			std::string m_addr_str;
+			std::atomic<std::shared_ptr<connection>> m_self;
 		};
 	}
 }

@@ -21,13 +21,12 @@ std::string current_date_time()
 	return buf;
 }
 
-
 std::vector<web::io_base::i_connection*> _connestions;
 std::atomic<int> total_pack = 0;
 std::atomic<unsigned long long> total_size = 0;
 std::atomic<int> total_conn = 0;
 
-bool fn_on_accepted(web::io_base::i_connection* conn, const SOCKET& socket)
+bool fn_on_accepted(web::io_base::i_connection* conn)
 {
 	total_conn++;
 	/*{
@@ -36,7 +35,7 @@ bool fn_on_accepted(web::io_base::i_connection* conn, const SOCKET& socket)
 	}*/
 
 	std::string str("[user");
-	str += std::to_string(conn->get_socket());
+	str += std::to_string(conn->get_id());
 	str += "] has been connected";
 
 	//std::shared_ptr<web::packet::packet_str> p(std::make_unique<web::packet::packet_str>(str.c_str()));
@@ -61,11 +60,14 @@ int fn_on_recv(web::io_base::i_connection* conn, const void* data, int size)
 	total_pack++;
 	total_size += size;
 
-	web::io_server::i_server* server = reinterpret_cast<web::io_server::i_server*>(conn->get_owner());
-
 	//server->detach(conn);
+	auto s = total_size.load();
 
+	conn->send_async(&s, sizeof(s));
+	conn->disconnect_async();
 	Sleep(1000);
+
+
 	//SOCKET sock = conn->get_socket();
 	/*{
 		std::lock_guard<std::mutex> lg(mut_cout);
@@ -106,15 +108,13 @@ void fn_on_disconnected(web::io_base::i_connection* conn)
 	}*/
 
 	std::string str("[user");
-	str += std::to_string(conn->get_socket());
+	str += std::to_string(conn->get_id());
 	str += "] ";
 	str += " has been disconnected";
 
-	web::io_server::i_server* server = reinterpret_cast<web::io_server::i_server*>(conn->get_owner());
-
 	{
 		std::lock_guard<std::recursive_mutex> lg(mut_conn);
-		auto item = std::find_if(_connestions.begin(), _connestions.end(), [&conn](web::io_base::i_connection* c) { return c->get_socket() == conn->get_socket(); });
+		auto item = std::find_if(_connestions.begin(), _connestions.end(), [&conn](web::io_base::i_connection* c) { return c->get_id() == conn->get_id(); });
 		if (item != _connestions.end())
 			_connestions.erase(item);
 

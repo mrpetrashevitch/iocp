@@ -62,29 +62,32 @@ namespace web
 
 			DWORD bytes = 0;
 
-			std::unique_ptr<io_base::connection> connection_(std::make_unique<io_base::connection>(accepted_socket, this));
+			int id = m_connection_counter++;
+
+			std::shared_ptr<io_base::connection> conn(std::make_shared<io_base::connection>(accepted_socket, id));
+			conn->self_lock(conn);
 
 			const int accept_ex_result = wsa_acceptex
 			(
 				_socket_accept.get_socket(),
 				accepted_socket,
-				connection_->accept_overlapped.buffer,
+				conn->accept_overlapped.buffer,
 				0,
 				sizeof(sockaddr_in) + 16,
 				sizeof(sockaddr_in) + 16,
 				&bytes, 
-				reinterpret_cast<LPOVERLAPPED>(&connection_->accept_overlapped.overlapped)
+				reinterpret_cast<LPOVERLAPPED>(&conn->accept_overlapped.overlapped)
 			);
 			
 			CreateIoCompletionPort(reinterpret_cast<HANDLE>(accepted_socket), _iocp, static_cast<ULONG_PTR>(io_base::completion_key::io), 0);
 
 			{
 				std::lock_guard<std::mutex> lg(_mut_v);
-				_connections.push_back(std::move(connection_));
+				_connections.push_back(std::move(conn));
 			}
 		}
 
-		bool server::_on_accept(io_base::i_connection* conn, SOCKET& socket)
+		bool server::_on_accept(io_base::i_connection* conn)
 		{
 			_accept(); // next accept
 
@@ -95,7 +98,7 @@ namespace web
 			}*/
 
 			if (_on_accepted) 
-				return _on_accepted(conn, socket);
+				return _on_accepted(conn);
 			return true;
 		}
 
@@ -106,15 +109,18 @@ namespace web
 
 			{
 				std::lock_guard<std::mutex> lg(_mut_v);
-				auto item = std::find_if(_connections.begin(), _connections.end(), [&conn](const std::unique_ptr<io_base::connection>& c) { return c->get_socket() == conn->get_socket(); });
+				auto item = std::find_if(_connections.begin(), _connections.end(), [&conn](const std::shared_ptr<io_base::connection>& c) { return c->get_id() == conn->get_id(); });
 				if (item != _connections.end())
+				{
+					(*item)->self_unlock();
 					_connections.erase(item);
+				}
 			}
 		}
 
 		server::server()
 		{
-			on_accepted = std::bind(&server::_on_accept, this, std::placeholders::_1, std::placeholders::_2);
+			on_accepted = std::bind(&server::_on_accept, this, std::placeholders::_1);
 			on_disconnected = std::bind(&server::_on_disconnect, this, std::placeholders::_1);
 		}
 
@@ -158,18 +164,6 @@ namespace web
 			if (!_inited) return;
 			for (auto& i : _threads) i->run();
 			_accept();
-		}
-
-		void server::detach(io_base::i_connection* conn)
-		{
-			shutdown(conn->get_socket(), SD_BOTH);
-			closesocket(conn->get_socket());
-		}
-
-		bool server::send(io_base::i_connection* conn, const void* data, int size)
-		{
-			if (!_inited) return false;
-			return _send(reinterpret_cast<io_base::connection*>(conn), data, size);
 		}
 
 		void server::set_on_accepted(callback::on_accepted callback)

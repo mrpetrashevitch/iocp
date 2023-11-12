@@ -20,10 +20,10 @@ const std::string current_date_time()
 
 std::mutex _mut_con;
 
-bool fn_on_connected(web::io_base::i_connection* conn, const SOCKET& socket)
+bool fn_on_connected(web::io_base::i_connection* conn)
 {
 	std::lock_guard<std::mutex> lg(_mut_con);
-	std::cout << current_date_time() << " on_connected: socket " << socket << std::endl;
+	std::cout << current_date_time() << " on_connected: id " << conn->get_id() << std::endl;
 
 	// closesocket(conn->get_socket());
 	return true;
@@ -64,7 +64,7 @@ void thre(web::io_client::i_client* cl, int threadid, const void* data, int size
 	ULONG64 total_send = 0;
 	for (size_t i = 0; i < 1; i++)
 	{
-		if (!cl->send(data, size))
+		if (!cl->send_async(data, size))
 			std::cout << "[" << threadid << "]" << current_date_time() << " failed to send packet " << i << std::endl;
 		else
 			total_send += size;
