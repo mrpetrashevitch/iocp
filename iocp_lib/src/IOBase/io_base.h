@@ -26,11 +26,11 @@ namespace web
 
 			bool _wsa_init();
 
-			void accept_handler(connection* conn);
-			void connect_handler(connection* conn);
-			void recv_handler(connection* conn, DWORD bytes_transferred);
-			void send_handler(connection* conn, DWORD bytes_transferred);
-			void disconnect_handler(connection* conn);
+			bool accept_handler(connection* conn);
+			bool connect_handler(connection* conn);
+			bool recv_handler(connection* conn, DWORD bytes_transferred);
+			bool send_handler(connection* conn, DWORD bytes_transferred);
+			bool disconnect_handler(connection* conn);
 
 			
 			

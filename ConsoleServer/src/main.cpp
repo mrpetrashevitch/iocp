@@ -64,8 +64,9 @@ int fn_on_recv(web::io_base::i_connection* conn, const void* data, int size)
 	auto s = total_size.load();
 
 	conn->send_async(&s, sizeof(s));
-	conn->disconnect_async();
+	//conn->close();
 	Sleep(1000);
+	conn->disconnect_async();
 
 
 	//SOCKET sock = conn->get_socket();

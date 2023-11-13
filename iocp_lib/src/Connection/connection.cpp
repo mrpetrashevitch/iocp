@@ -24,11 +24,6 @@ namespace web
 			int deasd = 1;
 		}
 
-		SOCKET& connection::get_socket()
-		{
-			return m_socket;
-		}
-
 		void connection::set_addr(const SOCKADDR_IN& addr)
 		{
 			char s[INET6_ADDRSTRLEN];
@@ -51,14 +46,14 @@ namespace web
 		bool connection::_recv_async()
 		{
 			DWORD flags = 0;
-			auto result = WSARecv(m_socket, recv_overlapped.buffer.get_wsabuf(), 1, nullptr, &flags, &recv_overlapped.overlapped, nullptr);
+			auto result = WSARecv(m_socket.load(), recv_overlapped.buffer.get_wsabuf(), 1, nullptr, &flags, &recv_overlapped.overlapped, nullptr);
 			return result == 0 || (result == SOCKET_ERROR && WSAGetLastError() == WSA_IO_PENDING);
 		}
 
 		bool connection::_send_async()
 		{
 			DWORD bytes;
-			auto result = WSASend(m_socket, send_overlapped.buffer.get_wsabuf(), 1, &bytes, 0, &send_overlapped.overlapped, nullptr);
+			auto result = WSASend(m_socket.load(), send_overlapped.buffer.get_wsabuf(), 1, &bytes, 0, &send_overlapped.overlapped, nullptr);
 			return result == 0 || (result == SOCKET_ERROR && WSAGetLastError() == WSA_IO_PENDING);
 		}
 
@@ -133,11 +128,12 @@ namespace web
 			DWORD bytes = 0;
 			return wsa_disconnectex
 			(
-				m_socket,
+				m_socket.load(),
 				&disconnect_overlapped.overlapped,
 				TF_REUSE_SOCKET,
 				0
 			);
 		}
+
 	}
 }

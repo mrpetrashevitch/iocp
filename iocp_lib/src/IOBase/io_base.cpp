@@ -22,44 +22,48 @@ namespace web
 			return true;
 		}
 
-		void base::accept_handler(connection* conn)
+		bool base::accept_handler(connection* conn)
 		{
 			conn->set_addr(*(sockaddr_in*)&conn->accept_overlapped.buffer[38]);
 
 			if (on_accepted)
 				if (!on_accepted(conn))
-					conn->disconnect_async();
+					return false;
 
 			if (!conn->_recv_async())
-				conn->disconnect_async();
+				return false;
+			return true;
 		}
 
-		void base::connect_handler(connection* conn)
+		bool base::connect_handler(connection* conn)
 		{
 			if (on_connected)
 				on_connected(conn);
 
 			if (!conn->_recv_async())
-				conn->disconnect_async();
+				return false;
+			return true;
 		}
 
-		void base::disconnect_handler(connection* conn)
+		bool base::disconnect_handler(connection* conn)
 		{
-			shutdown(conn->get_socket(), SD_BOTH);
-			closesocket(conn->get_socket());
+			auto soket = conn->m_socket.exchange(0);
+			if (!soket)
+				return false;
+
+			shutdown(soket, SD_BOTH);
+			closesocket(soket);
 
 			if (on_disconnected)
 				on_disconnected(conn);
+			return true;
 		}
 
-		void base::recv_handler(connection* conn, DWORD bytes_transferred)
+		bool base::recv_handler(connection* conn, DWORD bytes_transferred)
 		{
 			auto& over = conn->recv_overlapped;
 			if (!over.buffer.add_total_recv(bytes_transferred))
-			{
-				conn->disconnect_async();
-				return;
-			}
+				return false;
 
 			while (42)
 			{
@@ -74,17 +78,15 @@ namespace web
 			}
 
 			if (over.buffer.is_error())
-			{
-				conn->disconnect_async();
-				return;
-			}
+				return false;
 
 			over.buffer.fit();
 			if (!conn->_recv_async())
-				conn->disconnect_async();
+				return false;
+			return true;
 		}
 
-		void base::send_handler(connection* conn, DWORD bytes_transferred)
+		bool base::send_handler(connection* conn, DWORD bytes_transferred)
 		{
 			auto& over = conn->send_overlapped;
 
@@ -97,14 +99,12 @@ namespace web
 			}
 
 			if (error)
-			{
-				conn->disconnect_async();
-				return;
-			}
+				return false;
 
 			if (!empty)
 				if (!conn->_send_async())
-					conn->disconnect_async();
+					return false;
+			return true;
 		}
 
 		void base::_worker()
@@ -139,13 +139,15 @@ namespace web
 
 					if (overlapped->type == overlapped_type::accept)
 					{
-						accept_handler(conn.get());
+						if (!accept_handler(conn.get()))
+							disconnect_handler(conn.get());
 						continue;
 					}
 
 					if (overlapped->type == overlapped_type::connect)
 					{
-						connect_handler(conn.get());
+						if (!connect_handler(conn.get()))
+							disconnect_handler(conn.get());
 						continue;
 					}
 
@@ -157,13 +159,15 @@ namespace web
 
 					if (overlapped->type == overlapped_type::recv)
 					{
-						recv_handler(conn.get(), bytes_transferred);
+						if (!recv_handler(conn.get(), bytes_transferred))
+							disconnect_handler(conn.get());
 						continue;
 					}
 
 					if (overlapped->type == overlapped_type::send)
 					{
-						send_handler(conn.get(), bytes_transferred);
+						if (!send_handler(conn.get(), bytes_transferred))
+							disconnect_handler(conn.get());
 						continue;
 					}
 

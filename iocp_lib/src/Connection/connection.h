@@ -69,7 +69,6 @@ namespace web
 
 			connection(SOCKET socket, int id);
 			~connection();
-			SOCKET& get_socket();
 			void set_addr(const SOCKADDR_IN& addr);
 			bool _recv_async();
 			bool _send_async();
@@ -82,9 +81,9 @@ namespace web
 			bool send_async(const void* data, int size) override;
 			bool disconnect_async() override;
 
-		private:
+		public:
 			int m_id;
-			SOCKET m_socket;
+			std::atomic<SOCKET> m_socket;
 			SOCKADDR_IN m_addr;
 			std::string m_addr_str;
 			std::atomic<std::shared_ptr<connection>> m_self;
