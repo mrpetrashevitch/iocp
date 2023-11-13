@@ -1,6 +1,4 @@
 #pragma once
-#include "../defs.h"
-//#include "winsock2.h" // SOCKET, SOCKADDR_IN
 #include <string>
 
 namespace web

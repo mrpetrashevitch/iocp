@@ -1,7 +1,7 @@
 #pragma once
 #include "i_connection.h"
-#include "../WebBuffer/web_buffer_recv.h"
-#include "../WebBuffer/web_buffer_send.h"
+#include "../web_buffer/web_buffer_recv.h"
+#include "../web_buffer/web_buffer_send.h"
 
 #include <memory>
 #include <atomic>
@@ -61,12 +61,6 @@ namespace web
 		class connection : public i_connection
 		{
 		public:
-			overlapped_connect connect_overlapped;
-			overlapped_disconnect disconnect_overlapped;
-			overlapped_accept accept_overlapped;
-			overlapped_recv recv_overlapped;
-			overlapped_send send_overlapped;
-
 			connection(SOCKET socket, int id);
 			~connection();
 			void set_addr(const SOCKADDR_IN& addr);
@@ -87,6 +81,12 @@ namespace web
 			SOCKADDR_IN m_addr;
 			std::string m_addr_str;
 			std::atomic<std::shared_ptr<connection>> m_self;
+
+			overlapped_connect connect_overlapped;
+			overlapped_disconnect disconnect_overlapped;
+			overlapped_accept accept_overlapped;
+			overlapped_recv recv_overlapped;
+			overlapped_send send_overlapped;
 		};
 	}
 }

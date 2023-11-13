@@ -18,66 +18,84 @@
     <ClCompile Include="src\mainlib.cpp">
       <Filter>Исходные файлы</Filter>
     </ClCompile>
-    <ClCompile Include="src\Connection\connection.cpp">
+    <ClCompile Include="src\connection\connection.cpp">
       <Filter>Исходные файлы</Filter>
     </ClCompile>
-    <ClCompile Include="src\CallBack\callbacks_holder.cpp">
+    <ClCompile Include="src\callback\callbacks_holder.cpp">
       <Filter>Исходные файлы</Filter>
     </ClCompile>
     <ClCompile Include="src\Thread\thread.cpp">
       <Filter>Исходные файлы</Filter>
     </ClCompile>
-    <ClCompile Include="src\WebBuffer\web_buffer_recv.cpp">
+    <ClCompile Include="src\web_buffer\web_buffer_recv.cpp">
       <Filter>Исходные файлы</Filter>
     </ClCompile>
-    <ClCompile Include="src\WebBuffer\web_buffer_send.cpp">
+    <ClCompile Include="src\web_buffer\web_buffer_send.cpp">
       <Filter>Исходные файлы</Filter>
     </ClCompile>
-    <ClCompile Include="src\IOBase\io_base.cpp">
+    <ClCompile Include="src\io_base\io_base.cpp">
       <Filter>Исходные файлы</Filter>
     </ClCompile>
-    <ClCompile Include="src\Socket\socket.cpp">
+    <ClCompile Include="src\socket\socket.cpp">
+      <Filter>Исходные файлы</Filter>
+    </ClCompile>
+    <ClCompile Include="src\server\server.cpp">
+      <Filter>Исходные файлы</Filter>
+    </ClCompile>
+    <ClCompile Include="src\server\server_crater.cpp">
+      <Filter>Исходные файлы</Filter>
+    </ClCompile>
+    <ClCompile Include="src\client\client.cpp">
+      <Filter>Исходные файлы</Filter>
+    </ClCompile>
+    <ClCompile Include="src\client\client_crater.cpp">
       <Filter>Исходные файлы</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\defs.h">
+    <ClInclude Include="src\connection\connection.h">
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
-    <ClInclude Include="src\Connection\connection.h">
-      <Filter>Файлы заголовков</Filter>
-    </ClInclude>
-    <ClInclude Include="src\CallBack\callbacks_holder.h">
+    <ClInclude Include="src\callback\callbacks_holder.h">
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
     <ClInclude Include="src\Thread\thread.h">
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
-    <ClInclude Include="src\WebBuffer\web_buffer_recv.h">
+    <ClInclude Include="src\web_buffer\web_buffer_recv.h">
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
-    <ClInclude Include="src\Containers\safe_queue.h">
+    <ClInclude Include="src\web_buffer\web_buffer_send.h">
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
-    <ClInclude Include="src\WebBuffer\web_buffer_send.h">
+    <ClInclude Include="src\io_base\io_base.h">
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
-    <ClInclude Include="src\IOBase\io_base.h">
+    <ClInclude Include="src\socket\socket.h">
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
-    <ClInclude Include="src\Socket\socket.h">
+    <ClInclude Include="src\callback\callback.h">
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
-    <ClInclude Include="src\CallBack\callback.h">
+    <ClInclude Include="src\connection\i_connection.h">
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
-    <ClInclude Include="src\Connection\i_connection.h">
+    <ClInclude Include="src\server\i_server.h">
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
-    <ClInclude Include="src\IOBase\i_server.h">
+    <ClInclude Include="src\client\i_client.h">
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
-    <ClInclude Include="src\IOBase\i_client.h">
+    <ClInclude Include="src\server\server.h">
+      <Filter>Файлы заголовков</Filter>
+    </ClInclude>
+    <ClInclude Include="src\server\server_crater.h">
+      <Filter>Файлы заголовков</Filter>
+    </ClInclude>
+    <ClInclude Include="src\client\client.h">
+      <Filter>Файлы заголовков</Filter>
+    </ClInclude>
+    <ClInclude Include="src\client\client_crater.h">
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
   </ItemGroup>

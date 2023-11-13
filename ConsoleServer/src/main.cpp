@@ -147,7 +147,8 @@ int main()
 
 	web::io_server::web_server_dll_loader ld(path);
 
-	web::io_server::i_server* server = ld.create_fn(127, 0, 0, 1, 5001);
+	std::shared_ptr<web::io_server::i_server> server = nullptr;
+	ld.create_fn("127.0.0.1", 5001, server);
 
 	server->set_on_accepted(fn_on_accepted);
 	server->set_on_recv(fn_on_recv);
@@ -155,7 +156,6 @@ int main()
 
 	server->run();
 
-	std::vector<uint> vs(20);
 	int last = 0;
 
 	for (;;)

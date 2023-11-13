@@ -22,7 +22,7 @@ namespace web
 			return true;
 		}
 
-		bool base::accept_handler(connection* conn)
+		bool base::_accept_handler(connection* conn)
 		{
 			conn->set_addr(*(sockaddr_in*)&conn->accept_overlapped.buffer[38]);
 
@@ -35,7 +35,7 @@ namespace web
 			return true;
 		}
 
-		bool base::connect_handler(connection* conn)
+		bool base::_connect_handler(connection* conn)
 		{
 			if (on_connected)
 				on_connected(conn);
@@ -45,7 +45,7 @@ namespace web
 			return true;
 		}
 
-		bool base::disconnect_handler(connection* conn)
+		bool base::_disconnect_handler(connection* conn)
 		{
 			auto soket = conn->m_socket.exchange(0);
 			if (!soket)
@@ -59,7 +59,7 @@ namespace web
 			return true;
 		}
 
-		bool base::recv_handler(connection* conn, DWORD bytes_transferred)
+		bool base::_recv_handler(connection* conn, DWORD bytes_transferred)
 		{
 			auto& over = conn->recv_overlapped;
 			if (!over.buffer.add_total_recv(bytes_transferred))
@@ -86,7 +86,7 @@ namespace web
 			return true;
 		}
 
-		bool base::send_handler(connection* conn, DWORD bytes_transferred)
+		bool base::_send_handler(connection* conn, DWORD bytes_transferred)
 		{
 			auto& over = conn->send_overlapped;
 
@@ -118,7 +118,7 @@ namespace web
 
 				while (42)
 				{
-					success = GetQueuedCompletionStatus(_iocp, &bytes_transferred, &key, reinterpret_cast<LPOVERLAPPED*>(&overlapped), INFINITE);
+					success = GetQueuedCompletionStatus(m_iocp, &bytes_transferred, &key, reinterpret_cast<LPOVERLAPPED*>(&overlapped), INFINITE);
 
 					if (static_cast<completion_key>(key) == completion_key::shutdown)
 					{
@@ -133,41 +133,41 @@ namespace web
 
 					if (!success || overlapped->type == overlapped_type::disconnect)
 					{
-						disconnect_handler(conn.get());
+						_disconnect_handler(conn.get());
 						continue;
 					}
 
 					if (overlapped->type == overlapped_type::accept)
 					{
-						if (!accept_handler(conn.get()))
-							disconnect_handler(conn.get());
+						if (!_accept_handler(conn.get()))
+							_disconnect_handler(conn.get());
 						continue;
 					}
 
 					if (overlapped->type == overlapped_type::connect)
 					{
-						if (!connect_handler(conn.get()))
-							disconnect_handler(conn.get());
+						if (!_connect_handler(conn.get()))
+							_disconnect_handler(conn.get());
 						continue;
 					}
 
 					if (bytes_transferred == 0)
 					{
-						disconnect_handler(conn.get());
+						_disconnect_handler(conn.get());
 						continue;
 					}
 
 					if (overlapped->type == overlapped_type::recv)
 					{
-						if (!recv_handler(conn.get(), bytes_transferred))
-							disconnect_handler(conn.get());
+						if (!_recv_handler(conn.get(), bytes_transferred))
+							_disconnect_handler(conn.get());
 						continue;
 					}
 
 					if (overlapped->type == overlapped_type::send)
 					{
-						if (!send_handler(conn.get(), bytes_transferred))
-							disconnect_handler(conn.get());
+						if (!_send_handler(conn.get(), bytes_transferred))
+							_disconnect_handler(conn.get());
 						continue;
 					}
 
@@ -177,26 +177,6 @@ namespace web
 			{
 				int a = GetLastError();
 			}
-		}
-
-		SOCKADDR_IN base::get_sockaddr(byte s_b1, byte s_b2, byte s_b3, byte s_b4, ushort port)
-		{
-			byte addres[4]{ s_b1,s_b2, s_b3, s_b4 };
-			return get_sockaddr(*((unsigned long*)&addres), port);
-		}
-
-		SOCKADDR_IN base::get_sockaddr(const char* addres, ushort port)
-		{
-			return get_sockaddr(inet_addr(addres), port);
-		}
-
-		SOCKADDR_IN base::get_sockaddr(uint addres, ushort port)
-		{
-			SOCKADDR_IN serv_adr;
-			serv_adr.sin_family = AF_INET;
-			serv_adr.sin_addr.s_addr = addres;
-			serv_adr.sin_port = htons(port);
-			return serv_adr;
 		}
 	}
 }

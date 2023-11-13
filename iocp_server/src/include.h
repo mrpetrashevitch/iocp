@@ -1,20 +1,18 @@
 #pragma once
-#include "../../iocp_lib/src/IOBase/i_server.h"
+#include "../../iocp_lib/src/server/server_crater.h"
 #include <windows.h>
 
 namespace web
 {
 	namespace io_server
 	{
-		typedef i_server* (*create)(byte s_b1, byte s_b2, byte s_b3, byte s_b4, ushort port);
-		typedef bool (*destroy)(i_server* web);
+		typedef void (*create)(const char* addr, unsigned short port, std::shared_ptr<web::io_server::i_server>& out_server);
 
 		class web_server_dll_loader
 		{
 			HMODULE _h = nullptr;
 		public:
 			create create_fn = nullptr;
-			destroy destroy_fn = nullptr;
 
 			web_server_dll_loader(const char* path_dll)
 			{
@@ -22,7 +20,6 @@ namespace web
 				if (_h)
 				{
 					create_fn = (create)GetProcAddress(_h, "create");
-					destroy_fn = (destroy)GetProcAddress(_h, "destroy");
 				}
 			}
 		};

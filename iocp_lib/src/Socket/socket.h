@@ -1,5 +1,4 @@
 #pragma once
-#include "../defs.h"
 #include "winsock2.h" // SOCKET, SOCKADDR_IN
 
 namespace web
@@ -10,10 +9,7 @@ namespace web
 		{
 		public:
 			socket();
-			void init(byte s_b1, byte s_b2, byte s_b3, byte s_b4, ushort port);
-			void init(uint addres, ushort port);
-			void init(const char* addres, ushort port);
-			void init(const sockaddr_in& addr);
+			void init(const char* addres, unsigned short port);
 			void bind();
 			void bind_before_connect();
 			void listen();
@@ -22,10 +18,9 @@ namespace web
 			const sockaddr_in& get_socket_address() const;
 
 		private:
-			SOCKET _socket;
-			sockaddr_in _socket_address;
-			bool _inited;
-		
+			SOCKET m_socket;
+			sockaddr_in m_socket_address;
+			bool m_inited;
 		};
 	}
 }

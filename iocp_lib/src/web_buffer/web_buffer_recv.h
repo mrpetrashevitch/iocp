@@ -19,6 +19,7 @@ namespace web
 			void fit();
 			bool is_error();
 			WSABUF* get_wsabuf();
+
 		private:
 			bool m_is_error;
 			byte* m_buff;

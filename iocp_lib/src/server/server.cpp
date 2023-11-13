@@ -69,7 +69,7 @@ namespace web
 
 			const int accept_ex_result = wsa_acceptex
 			(
-				_socket_accept.get_socket(),
+				m_socket_accept.get_socket(),
 				accepted_socket,
 				conn->accept_overlapped.buffer,
 				0,
@@ -79,11 +79,11 @@ namespace web
 				reinterpret_cast<LPOVERLAPPED>(&conn->accept_overlapped.overlapped)
 			);
 			
-			CreateIoCompletionPort(reinterpret_cast<HANDLE>(accepted_socket), _iocp, static_cast<ULONG_PTR>(io_base::completion_key::io), 0);
+			CreateIoCompletionPort(reinterpret_cast<HANDLE>(accepted_socket), m_iocp, static_cast<ULONG_PTR>(io_base::completion_key::io), 0);
 
 			{
-				std::lock_guard<std::mutex> lg(_mut_v);
-				_connections.push_back(std::move(conn));
+				std::lock_guard<std::mutex> lg(m_mut_v);
+				m_connections.push_back(std::move(conn));
 			}
 		}
 
@@ -97,23 +97,23 @@ namespace web
 				return false;
 			}*/
 
-			if (_on_accepted) 
-				return _on_accepted(conn);
+			if (m_on_accepted) 
+				return m_on_accepted(conn);
 			return true;
 		}
 
 		void server::_on_disconnect(io_base::i_connection* conn)
 		{
-			if (_on_disconnected) 
-				_on_disconnected(conn);
+			if (m_on_disconnected) 
+				m_on_disconnected(conn);
 
 			{
-				std::lock_guard<std::mutex> lg(_mut_v);
-				auto item = std::find_if(_connections.begin(), _connections.end(), [&conn](const std::shared_ptr<io_base::connection>& c) { return c->get_id() == conn->get_id(); });
-				if (item != _connections.end())
+				std::lock_guard<std::mutex> lg(m_mut_v);
+				auto item = std::find_if(m_connections.begin(), m_connections.end(), [&conn](const std::shared_ptr<io_base::connection>& c) { return c->get_id() == conn->get_id(); });
+				if (item != m_connections.end())
 				{
 					(*item)->self_unlock();
-					_connections.erase(item);
+					m_connections.erase(item);
 				}
 			}
 		}
@@ -126,24 +126,24 @@ namespace web
 
 		server::~server()
 		{
-			_inited = false;
-			_threads.clear();
-			_connections.clear();
+			m_inited = false;
+			m_threads.clear();
+			m_connections.clear();
 		}
 
-		void server::init(const SOCKADDR_IN& addr)
+		void server::init(const char* addr, unsigned short port)
 		{
 			_wsa_init();
 
 			int thread_count = std::thread::hardware_concurrency();
 			//thread_count = 1;
 
-			_iocp = ::CreateIoCompletionPort(INVALID_HANDLE_VALUE, nullptr, 0, thread_count);
-			_socket_accept.init(addr);
-			CreateIoCompletionPort(reinterpret_cast<HANDLE>(_socket_accept.get_socket()), _iocp, 0, 0);
+			m_iocp = ::CreateIoCompletionPort(INVALID_HANDLE_VALUE, nullptr, 0, thread_count);
+			m_socket_accept.init(addr, port);
+			CreateIoCompletionPort(reinterpret_cast<HANDLE>(m_socket_accept.get_socket()), m_iocp, 0, 0);
 
-			_socket_accept.bind();
-			_socket_accept.listen(1);
+			m_socket_accept.bind();
+			m_socket_accept.listen(1);
 
 			for (int i = 0; i < thread_count; ++i)
 			{
@@ -151,24 +151,24 @@ namespace web
 				_worker_thread->set_func(std::bind(&server::_worker, this));
 				_worker_thread->set_exit([this]
 					{
-						PostQueuedCompletionStatus(_iocp, 0, static_cast<ULONG_PTR>(io_base::completion_key::shutdown), nullptr);
+						PostQueuedCompletionStatus(m_iocp, 0, static_cast<ULONG_PTR>(io_base::completion_key::shutdown), nullptr);
 					}
 				);
-				_threads.push_back(std::move(_worker_thread));
+				m_threads.push_back(std::move(_worker_thread));
 			}
-			_inited = true;
+			m_inited = true;
 		}
 
 		void server::run()
 		{
-			if (!_inited) return;
-			for (auto& i : _threads) i->run();
+			if (!m_inited) return;
+			for (auto& i : m_threads) i->run();
 			_accept();
 		}
 
 		void server::set_on_accepted(callback::on_accepted callback)
 		{
-			_on_accepted = callback;
+			m_on_accepted = callback;
 		}
 
 		void server::set_on_recv(callback::on_recv callback)
@@ -178,7 +178,7 @@ namespace web
 
 		void server::set_on_disconnected(callback::on_disconnected callback)
 		{
-			_on_disconnected = callback;
+			m_on_disconnected = callback;
 		}
 	}
 }

@@ -171,29 +171,35 @@
     </Lib>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="src\CallBack\callbacks_holder.cpp" />
-    <ClCompile Include="src\Connection\connection.cpp" />
+    <ClCompile Include="src\client\client.cpp" />
+    <ClCompile Include="src\client\client_crater.cpp" />
+    <ClCompile Include="src\server\server_crater.cpp" />
+    <ClCompile Include="src\callback\callbacks_holder.cpp" />
+    <ClCompile Include="src\connection\connection.cpp" />
     <ClCompile Include="src\mainlib.cpp" />
-    <ClCompile Include="src\Socket\socket.cpp" />
+    <ClCompile Include="src\server\server.cpp" />
+    <ClCompile Include="src\socket\socket.cpp" />
     <ClCompile Include="src\Thread\thread.cpp" />
-    <ClCompile Include="src\WebBuffer\web_buffer_recv.cpp" />
-    <ClCompile Include="src\WebBuffer\web_buffer_send.cpp" />
-    <ClCompile Include="src\IOBase\io_base.cpp" />
+    <ClCompile Include="src\web_buffer\web_buffer_recv.cpp" />
+    <ClCompile Include="src\web_buffer\web_buffer_send.cpp" />
+    <ClCompile Include="src\io_base\io_base.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\CallBack\callback.h" />
-    <ClInclude Include="src\Connection\i_connection.h" />
-    <ClInclude Include="src\Containers\safe_queue.h" />
-    <ClInclude Include="src\IOBase\i_client.h" />
-    <ClInclude Include="src\IOBase\i_server.h" />
-    <ClInclude Include="src\CallBack\callbacks_holder.h" />
-    <ClInclude Include="src\Connection\connection.h" />
-    <ClInclude Include="src\defs.h" />
-    <ClInclude Include="src\Socket\socket.h" />
+    <ClInclude Include="src\client\client.h" />
+    <ClInclude Include="src\client\client_crater.h" />
+    <ClInclude Include="src\server\server_crater.h" />
+    <ClInclude Include="src\callback\callback.h" />
+    <ClInclude Include="src\connection\i_connection.h" />
+    <ClInclude Include="src\client\i_client.h" />
+    <ClInclude Include="src\server\i_server.h" />
+    <ClInclude Include="src\callback\callbacks_holder.h" />
+    <ClInclude Include="src\connection\connection.h" />
+    <ClInclude Include="src\server\server.h" />
+    <ClInclude Include="src\socket\socket.h" />
     <ClInclude Include="src\Thread\thread.h" />
-    <ClInclude Include="src\WebBuffer\web_buffer_recv.h" />
-    <ClInclude Include="src\WebBuffer\web_buffer_send.h" />
-    <ClInclude Include="src\IOBase\io_base.h" />
+    <ClInclude Include="src\web_buffer\web_buffer_recv.h" />
+    <ClInclude Include="src\web_buffer\web_buffer_send.h" />
+    <ClInclude Include="src\io_base\io_base.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -45,20 +45,6 @@ void fn_on_disconnected(web::io_base::i_connection* conn)
 	std::cout << current_date_time() << " on_disconnected: server is not available" << std::endl;
 }
 
-
-void Clear()
-{
-#if defined _WIN32
-	system("cls");
-	//clrscr(); // including header file : conio.h
-#elif defined (__LINUX__) || defined(__gnu_linux__) || defined(__linux__)
-	system("clear");
-	//std::cout<< u8"\033[2J\033[1;1H"; //Using ANSI Escape Sequences 
-#elif defined (__APPLE__)
-	system("clear");
-#endif
-}
-
 void thre(web::io_client::i_client* cl, int threadid, const void* data, int size)
 {
 	ULONG64 total_send = 0;
@@ -69,8 +55,6 @@ void thre(web::io_client::i_client* cl, int threadid, const void* data, int size
 		else
 			total_send += size;
 	}
-
-	
 	std::cout << "[" << threadid << "]" << current_date_time() << " total send " << total_send << std::endl;
 }
 
@@ -89,17 +73,27 @@ int main()
 	std::string str;
 	std::getline(std::cin, str);
 
+	std::vector<std::shared_ptr<web::io_client::i_client>> clients;
+
 	if (str.size() > 0)
 	{
 		for (size_t i = 0; i < 1; i++)
 		{
-			auto client = ld.create_fn(127, 0, 0, 1, 5001);
+			std::shared_ptr<web::io_client::i_client> client = nullptr;
+			ld.create_fn("127.0.0.1", 5001, client);
+			if (!client)
+			{
+				std::cout << "Failed to create client" << std::endl;
+				continue;
+			}
 			client->set_on_connected(fn_on_connected);
 			client->set_on_recv(fn_on_recv);
 			client->set_on_disconnected(fn_on_disconnected);
 			client->run();
-			std::thread th(thre, client, i, str.c_str(), strlen(str.c_str()) + sizeof(char));
+			std::thread th(thre, client.get(), i, str.c_str(), strlen(str.c_str()) + sizeof(char));
 			th.detach();
+
+			clients.push_back(client);
 		}
 	}
 	std::cin.get();

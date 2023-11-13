@@ -18,14 +18,8 @@
     <ClCompile Include="src\maindll.cpp">
       <Filter>Исходные файлы</Filter>
     </ClCompile>
-    <ClCompile Include="src\WebClient\client.cpp">
-      <Filter>Исходные файлы</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\WebClient\client.h">
-      <Filter>Файлы заголовков</Filter>
-    </ClInclude>
     <ClInclude Include="src\include.h">
       <Filter>Файлы заголовков</Filter>
     </ClInclude>

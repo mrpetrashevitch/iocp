@@ -1,18 +1,9 @@
-#include "WebServer/server.h"
+#include "../../iocp_lib/src/server/server_crater.h"
 
 extern "C"
 {
-	__declspec(dllexport) web::io_server::i_server* create(byte s_b1, byte s_b2, byte s_b3, byte s_b4, ushort port)
+	__declspec(dllexport) void create(const char* addr, unsigned short port, std::shared_ptr<web::io_server::i_server>& out_server)
 	{
-		web::io_server::server* web = new web::io_server::server();
-		web->init(web->get_sockaddr(s_b1, s_b2, s_b3, s_b4, port));
-		return web;
-	}
-
-	__declspec(dllexport) bool destroy(web::io_server::i_server* web)
-	{
-		if (!web) return false;
-		delete web;
-		return true;
+		out_server = web::io_server::server_crater::create(addr, port);
 	}
 }

@@ -1,5 +1,5 @@
 #pragma once
-#include "../Connection/i_connection.h"
+#include "../connection/i_connection.h"
 
 #include <functional> // std::function
 

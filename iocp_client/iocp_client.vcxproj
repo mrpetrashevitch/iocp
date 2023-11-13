@@ -167,12 +167,10 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="src\WebClient\client.cpp" />
     <ClCompile Include="src\maindll.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\include.h" />
-    <ClInclude Include="src\WebClient\client.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

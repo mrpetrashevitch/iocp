@@ -1,8 +1,8 @@
 #pragma once
-#include "../../../iocp_lib/src/IOBase/i_client.h"
-#include "../../../iocp_lib/src/IOBase/io_base.h"
+#include "i_client.h"
+#include "../../../iocp_lib/src/io_base/io_base.h"
 #include "../../../iocp_lib/src/Thread/thread.h"
-#include "../../../iocp_lib/src/Socket/socket.h"
+#include "../../../iocp_lib/src/socket/socket.h"
 
 namespace web
 {
@@ -14,7 +14,7 @@ namespace web
 			client();
 			~client();
 
-			void init(const SOCKADDR_IN& addr);
+			void init(const char* addr, unsigned short port);
 			void run() override;
 
 			bool send_async(const void* data, int size) override;
@@ -23,17 +23,15 @@ namespace web
 			void set_on_connected(callback::on_connected callback) override;
 			void set_on_recv(callback::on_recv callback) override;
 			void set_on_disconnected(callback::on_disconnected callback) override;
+
 		private:
+			bool m_inited = false;
+			io_base::socket m_socket_connect;
+			std::vector<std::unique_ptr<thread::thread>> m_threads;
+			std::shared_ptr<io_base::connection> m_connection;
 
-			bool _inited = false;
-
-			io_base::socket _socket_connect;
-
-			std::vector<std::unique_ptr<thread::thread>> _threads;
-			std::shared_ptr<io_base::connection> _connection;
-
+		private:
 			void _connect();
-		
 		};
 	}
 }
