@@ -11,25 +11,27 @@ namespace web
 			ZeroMemory(&m_socket_address, sizeof(m_socket_address));
 		}
 
-		void socket::init(const char* addres, unsigned short port)
+		bool socket::init(const char* addres, unsigned short port)
 		{
 			sockaddr_in serv_adr;
 			serv_adr.sin_family = AF_INET;
 			serv_adr.sin_addr.s_addr = inet_addr(addres);
 			serv_adr.sin_port = htons(port);
 			m_socket = WSASocket(AF_INET, SOCK_STREAM, IPPROTO_TCP, NULL, 0, WSA_FLAG_OVERLAPPED);
+			if (m_socket == INVALID_SOCKET)
+				return false;
 			m_socket_address = serv_adr;
 			m_inited = true;
 		}
 
-		void socket::bind()
+		bool socket::bind()
 		{
 			const unsigned so_reuseaddr = 1;
 			//::setsockopt(_socket_accept, SOL_SOCKET, SO_REUSEADDR, reinterpret_cast<const char*>(&so_reuseaddr), sizeof(so_reuseaddr));
-			int res = ::bind(m_socket, reinterpret_cast<SOCKADDR*>(&m_socket_address), sizeof(m_socket_address));
-			return;
+			return ::bind(m_socket, reinterpret_cast<SOCKADDR*>(&m_socket_address), sizeof(m_socket_address)) != INVALID_SOCKET;
 		}
-		void socket::bind_before_connect()
+
+		bool socket::bind_before_connect()
 		{
 			// ConnectEx requires the socket to be initially bound
 			struct sockaddr_in addr;
@@ -39,17 +41,27 @@ namespace web
 			addr.sin_addr.s_addr = INADDR_ANY;
 			addr.sin_port = 0;
 
-			int res = ::bind(m_socket, reinterpret_cast<SOCKADDR*>(&addr), sizeof(addr));
-		}
-		void socket::listen()
-		{
-			listen(1);
+			return ::bind(m_socket, reinterpret_cast<SOCKADDR*>(&addr), sizeof(addr)) != INVALID_SOCKET;
 		}
 
-		void socket::listen(int backlog)
+		bool socket::listen()
 		{
-			int res = ::listen(m_socket, backlog);
-			return;
+			return listen(1);
+		}
+
+		bool socket::listen(int backlog)
+		{
+			return ::listen(m_socket, backlog) != INVALID_SOCKET;
+		}
+
+		bool socket::close()
+		{
+			if (shutdown(m_socket, SD_BOTH) == 0 && closesocket(m_socket) == 0)
+			{
+				m_socket = 0;
+				return true;
+			}
+			return false;
 		}
 
 		const SOCKET& socket::get_socket() const

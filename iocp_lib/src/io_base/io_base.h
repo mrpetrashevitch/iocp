@@ -26,7 +26,7 @@ namespace web
 			bool _recv_handler(connection* conn, DWORD bytes_transferred);
 			bool _send_handler(connection* conn, DWORD bytes_transferred);
 			bool _disconnect_handler(connection* conn);
-			void _worker();
+			void _worker(std::atomic<int>& total_thread);
 		};
 	}
 }

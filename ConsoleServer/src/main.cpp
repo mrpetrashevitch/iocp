@@ -26,7 +26,7 @@ std::atomic<int> total_pack = 0;
 std::atomic<unsigned long long> total_size = 0;
 std::atomic<int> total_conn = 0;
 
-bool fn_on_accepted(web::io_base::i_connection* conn)
+void fn_on_accepted(web::io_base::i_connection* conn)
 {
 	total_conn++;
 	/*{
@@ -52,7 +52,6 @@ bool fn_on_accepted(web::io_base::i_connection* conn)
 			if (i->get_socket() != socket)
 				server->send(i, p);
 	}*/
-	return true;
 }
 
 int fn_on_recv(web::io_base::i_connection* conn, const void* data, int size)
@@ -148,13 +147,13 @@ int main()
 	web::io_server::web_server_dll_loader ld(path);
 
 	std::shared_ptr<web::io_server::i_server> server = nullptr;
-	ld.create_fn("127.0.0.1", 5001, server);
+	ld.create_fn(server);
 
 	server->set_on_accepted(fn_on_accepted);
 	server->set_on_recv(fn_on_recv);
 	server->set_on_disconnected(fn_on_disconnected);
 
-	server->run();
+	server->run("127.0.0.1", 5001, 0, 0);
 
 	int last = 0;
 

@@ -9,11 +9,12 @@ namespace web
 		{
 		public:
 			socket();
-			void init(const char* addres, unsigned short port);
-			void bind();
-			void bind_before_connect();
-			void listen();
-			void listen(int members);
+			bool init(const char* addres, unsigned short port);
+			bool bind();
+			bool bind_before_connect();
+			bool listen();
+			bool listen(int members);
+			bool close();
 			const SOCKET& get_socket() const;
 			const sockaddr_in& get_socket_address() const;
 

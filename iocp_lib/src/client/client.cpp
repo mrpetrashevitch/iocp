@@ -91,7 +91,7 @@ namespace web
 
 			m_socket_connect.bind_before_connect();
 
-			for (int i = 0; i < thread_count; ++i)
+			/*for (int i = 0; i < thread_count; ++i)
 			{
 				std::unique_ptr<thread::thread> _worker_thread(std::make_unique<thread::thread>());
 				_worker_thread->set_func(std::bind(&client::_worker, this));
@@ -101,7 +101,7 @@ namespace web
 					}
 				);
 				m_threads.push_back(std::move(_worker_thread));
-			}
+			}*/
 			m_inited = true;
 		}
 

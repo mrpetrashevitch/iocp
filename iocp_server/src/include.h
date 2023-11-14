@@ -6,7 +6,7 @@ namespace web
 {
 	namespace io_server
 	{
-		typedef void (*create)(const char* addr, unsigned short port, std::shared_ptr<web::io_server::i_server>& out_server);
+		typedef void (*create)(std::shared_ptr<web::io_server::i_server>& out_server);
 
 		class web_server_dll_loader
 		{

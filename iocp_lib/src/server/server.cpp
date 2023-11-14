@@ -12,6 +12,111 @@ namespace web
 {
 	namespace io_server
 	{
+		server::server()
+			: m_state(server_state::stoped), m_error(false), m_connection_counter(0)
+		{
+			if (!_wsa_init())
+				_set_error("Failed to init wsa");
+
+			on_accepted = std::bind(&server::_on_accept, this, std::placeholders::_1);
+			on_disconnected = std::bind(&server::_on_disconnect, this, std::placeholders::_1);
+		}
+
+		server::~server()
+		{
+		}
+
+		bool server::run(const char* addr, unsigned short port, int thread_max, int connection_max)
+		{
+			if (m_error) return false;
+
+			if (connection_max < 0)
+				connection_max = 10000;
+			m_connection_max = connection_max;
+
+			if (thread_max < 1)
+				thread_max = std::thread::hardware_concurrency() * 2;
+			m_thread_max = thread_max;
+
+			m_iocp = ::CreateIoCompletionPort(INVALID_HANDLE_VALUE, nullptr, 0, m_thread_max);
+			if (m_iocp == 0)
+			{ 
+				_set_error("Failed to create io completion port");
+				return false;
+			}
+
+			if (!m_socket_accept.init(addr, port))
+			{
+				_set_error("Failed to init accept socket");
+				return false;
+			}
+
+			if (!CreateIoCompletionPort(reinterpret_cast<HANDLE>(m_socket_accept.get_socket()), m_iocp, 0, 0))
+			{
+				_set_error("Failed to add accept socket to iocp");
+				return false;
+			}
+
+			if (!m_socket_accept.bind())
+			{
+				_set_error("Failed to bind accept socket");
+				return false;
+			}
+
+			if (!m_socket_accept.listen(1))
+			{
+				_set_error("Failed to listen accept socket");
+				return false;
+			}
+
+			m_state = server_state::runing;
+
+			for (size_t i = 0; i < m_thread_max; i++)
+			{
+				std::thread worker_thread(&server::_worker, this, std::ref(m_thread_working));
+				worker_thread.detach();
+			}
+
+			{
+				std::lock_guard<std::mutex> lg(m_mut_v);
+				m_connections.clear();
+				if (m_connections.size() < m_connection_max)
+					_accept();
+			}
+
+			return true;
+		}
+
+		void server::stop()
+		{
+			if (m_state == server_state::stoped || m_state == server_state::stoping)
+				return;
+
+			m_state = server_state::stoping;
+
+			m_socket_accept.close();
+
+			for (size_t i = 0; i < m_thread_max; i++)
+			{
+				PostQueuedCompletionStatus(m_iocp, 0, static_cast<ULONG_PTR>(io_base::completion_key::shutdown), nullptr);
+			}
+		}
+
+		void server::set_on_accepted(callback::on_accepted callback)
+		{
+			m_on_accepted = callback;
+		}
+
+		void server::set_on_recv(callback::on_recv callback)
+		{
+			base::set_on_recv(callback);
+		}
+
+		void server::set_on_disconnected(callback::on_disconnected callback)
+		{
+			m_on_disconnected = callback;
+		}
+
 		bool wsa_acceptex(
 			_In_ SOCKET sListenSocket,
 			_In_ SOCKET sAcceptSocket,
@@ -43,18 +148,24 @@ namespace web
 				sAcceptSocket,
 				lpOutputBuffer,
 				dwReceiveDataLength,
-				dwLocalAddressLength, 
+				dwLocalAddressLength,
 				dwRemoteAddressLength,
-				lpdwBytesReceived, 
+				lpdwBytesReceived,
 				lpOverlapped
 			);
 
 			return result == TRUE || WSAGetLastError() == WSA_IO_PENDING;
 		}
 
-		void server::_accept()
+		bool server::_accept()
 		{
 			SOCKET accepted_socket = WSASocket(AF_INET, SOCK_STREAM, IPPROTO_TCP, nullptr, 0, WSA_FLAG_OVERLAPPED);
+
+			if (accepted_socket == INVALID_SOCKET)
+			{
+				_set_error("Failed to create accepted socket");
+				return false;
+			}
 
 			// disble send buffering
 			int opt = 0;
@@ -75,21 +186,31 @@ namespace web
 				0,
 				sizeof(sockaddr_in) + 16,
 				sizeof(sockaddr_in) + 16,
-				&bytes, 
+				&bytes,
 				reinterpret_cast<LPOVERLAPPED>(&conn->accept_overlapped.overlapped)
 			);
-			
-			CreateIoCompletionPort(reinterpret_cast<HANDLE>(accepted_socket), m_iocp, static_cast<ULONG_PTR>(io_base::completion_key::io), 0);
+
+			if (!CreateIoCompletionPort(reinterpret_cast<HANDLE>(accepted_socket), m_iocp, static_cast<ULONG_PTR>(io_base::completion_key::io), 0))
+			{
+				_set_error("Failed to add accepted socket to iocp");
+				return false;
+			}
 
 			{
 				std::lock_guard<std::mutex> lg(m_mut_v);
 				m_connections.push_back(std::move(conn));
 			}
+
+			return true;
 		}
 
-		bool server::_on_accept(io_base::i_connection* conn)
+		void server::_on_accept(io_base::i_connection* conn)
 		{
-			_accept(); // next accept
+			{
+				std::lock_guard<std::mutex> lg(m_mut_v);
+				if (m_connections.size() < m_connection_max)
+					_accept();
+			}
 
 			// only TCP
 			/*int opt_on = 1;
@@ -97,88 +218,48 @@ namespace web
 				return false;
 			}*/
 
-			if (m_on_accepted) 
-				return m_on_accepted(conn);
-			return true;
+			if (m_on_accepted)
+				m_on_accepted(conn);
 		}
 
 		void server::_on_disconnect(io_base::i_connection* conn)
 		{
-			if (m_on_disconnected) 
+			if (m_on_disconnected)
 				m_on_disconnected(conn);
 
 			{
 				std::lock_guard<std::mutex> lg(m_mut_v);
+				int use_accept = false;
+
 				auto item = std::find_if(m_connections.begin(), m_connections.end(), [&conn](const std::shared_ptr<io_base::connection>& c) { return c->get_id() == conn->get_id(); });
 				if (item != m_connections.end())
 				{
 					(*item)->self_unlock();
+					use_accept = m_connections.size() == m_connection_max;
 					m_connections.erase(item);
 				}
+
+				if (use_accept)
+					_accept();
 			}
 		}
 
-		server::server()
+		void server::_set_error(const char* msg)
 		{
-			on_accepted = std::bind(&server::_on_accept, this, std::placeholders::_1);
-			on_disconnected = std::bind(&server::_on_disconnect, this, std::placeholders::_1);
-		}
+			m_error = true;
+			int err_no = WSAGetLastError();
+			LPVOID lpMsgBuf;
+			FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM,
+				NULL, err_no, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPSTR)&lpMsgBuf, 0, NULL);
 
-		server::~server()
-		{
-			m_inited = false;
-			m_threads.clear();
-			m_connections.clear();
-		}
+			std::string s = std::string(msg);
+			s += std::string(", error: (") + std::to_string(err_no) + std::string(") ");
+			s += std::string((LPCSTR)lpMsgBuf);
+			s += std::string("\n");
+			LocalFree(lpMsgBuf);
 
-		void server::init(const char* addr, unsigned short port)
-		{
-			_wsa_init();
-
-			int thread_count = std::thread::hardware_concurrency();
-			//thread_count = 1;
-
-			m_iocp = ::CreateIoCompletionPort(INVALID_HANDLE_VALUE, nullptr, 0, thread_count);
-			m_socket_accept.init(addr, port);
-			CreateIoCompletionPort(reinterpret_cast<HANDLE>(m_socket_accept.get_socket()), m_iocp, 0, 0);
-
-			m_socket_accept.bind();
-			m_socket_accept.listen(1);
-
-			for (int i = 0; i < thread_count; ++i)
-			{
-				std::unique_ptr<thread::thread> _worker_thread(std::make_unique<thread::thread>());
-				_worker_thread->set_func(std::bind(&server::_worker, this));
-				_worker_thread->set_exit([this]
-					{
-						PostQueuedCompletionStatus(m_iocp, 0, static_cast<ULONG_PTR>(io_base::completion_key::shutdown), nullptr);
-					}
-				);
-				m_threads.push_back(std::move(_worker_thread));
-			}
-			m_inited = true;
-		}
-
-		void server::run()
-		{
-			if (!m_inited) return;
-			for (auto& i : m_threads) i->run();
-			_accept();
-		}
-
-		void server::set_on_accepted(callback::on_accepted callback)
-		{
-			m_on_accepted = callback;
-		}
-
-		void server::set_on_recv(callback::on_recv callback)
-		{
-			base::set_on_recv(callback);
-		}
-
-		void server::set_on_disconnected(callback::on_disconnected callback)
-		{
-			m_on_disconnected = callback;
+			std::lock_guard<std::mutex> lock(m_error_msg_lock);
+			m_error_msgs += s;
 		}
 	}
 }

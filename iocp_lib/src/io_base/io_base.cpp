@@ -27,8 +27,7 @@ namespace web
 			conn->set_addr(*(sockaddr_in*)&conn->accept_overlapped.buffer[38]);
 
 			if (on_accepted)
-				if (!on_accepted(conn))
-					return false;
+				on_accepted(conn);
 
 			if (!conn->_recv_async())
 				return false;
@@ -107,8 +106,9 @@ namespace web
 			return true;
 		}
 
-		void base::_worker()
+		void base::_worker(std::atomic<int>& total_thread)
 		{
+			total_thread++;
 			try
 			{
 				DWORD success;
@@ -177,6 +177,7 @@ namespace web
 			{
 				int a = GetLastError();
 			}
+			total_thread--;
 		}
 	}
 }
