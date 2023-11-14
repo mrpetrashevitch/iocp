@@ -183,6 +183,7 @@
     <ClCompile Include="src\web_buffer\web_buffer_recv.cpp" />
     <ClCompile Include="src\web_buffer\web_buffer_send.cpp" />
     <ClCompile Include="src\io_base\io_base.cpp" />
+    <ClCompile Include="src\wsa_ex\wsa_ex.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\client\client.h" />
@@ -200,6 +201,7 @@
     <ClInclude Include="src\web_buffer\web_buffer_recv.h" />
     <ClInclude Include="src\web_buffer\web_buffer_send.h" />
     <ClInclude Include="src\io_base\io_base.h" />
+    <ClInclude Include="src\wsa_ex\wsa_ex.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

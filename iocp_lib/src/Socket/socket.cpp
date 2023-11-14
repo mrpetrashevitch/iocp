@@ -22,6 +22,7 @@ namespace web
 				return false;
 			m_socket_address = serv_adr;
 			m_inited = true;
+			return true;
 		}
 
 		bool socket::bind()
@@ -56,11 +57,15 @@ namespace web
 
 		bool socket::close()
 		{
-			if (shutdown(m_socket, SD_BOTH) == 0 && closesocket(m_socket) == 0)
+			auto res = shutdown(m_socket, SD_BOTH);
+			auto err = WSAGetLastError();
+			auto res2 = closesocket(m_socket) == 0;
+			auto err2 = WSAGetLastError();
+			/*if (shutdown(m_socket, SD_BOTH) == 0 && closesocket(m_socket) == 0)
 			{
 				m_socket = 0;
 				return true;
-			}
+			}*/
 			return false;
 		}
 

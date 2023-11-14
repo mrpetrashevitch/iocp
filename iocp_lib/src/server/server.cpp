@@ -1,6 +1,7 @@
 #include "server.h"
-#include <algorithm>
+#include "../wsa_ex/wsa_ex.h"
 
+#include <algorithm>
 #include <Ws2tcpip.h>
 #include <mswsock.h>
 
@@ -30,7 +31,7 @@ namespace web
 		{
 			if (m_error) return false;
 
-			if (connection_max < 0)
+			if (connection_max < 1)
 				connection_max = 10000;
 			m_connection_max = connection_max;
 
@@ -96,10 +97,12 @@ namespace web
 
 			m_socket_accept.close();
 
-			for (size_t i = 0; i < m_thread_max; i++)
+			//m_connections[0]->disconnect_async();
+
+			/*for (size_t i = 0; i < m_thread_max; i++)
 			{
 				PostQueuedCompletionStatus(m_iocp, 0, static_cast<ULONG_PTR>(io_base::completion_key::shutdown), nullptr);
-			}
+			}*/
 		}
 
 		void server::set_on_accepted(callback::on_accepted callback)
@@ -117,95 +120,63 @@ namespace web
 			m_on_disconnected = callback;
 		}
 
-		bool wsa_acceptex(
-			_In_ SOCKET sListenSocket,
-			_In_ SOCKET sAcceptSocket,
-			_Out_writes_bytes_(dwReceiveDataLength + dwLocalAddressLength + dwRemoteAddressLength) PVOID lpOutputBuffer,
-			_In_ DWORD dwReceiveDataLength,
-			_In_ DWORD dwLocalAddressLength,
-			_In_ DWORD dwRemoteAddressLength,
-			_Out_ LPDWORD lpdwBytesReceived,
-			_Inout_ LPOVERLAPPED lpOverlapped)
-		{
-			static LPFN_ACCEPTEX acceptex_func = nullptr;
-			if (!acceptex_func)
-			{
-				GUID acceptex_guid = WSAID_ACCEPTEX;
-				DWORD bytes_returned;
-				if (WSAIoctl(sListenSocket,
-					SIO_GET_EXTENSION_FUNCTION_POINTER,
-					&acceptex_guid,
-					sizeof(acceptex_guid),
-					&acceptex_func,
-					sizeof(acceptex_func),
-					&bytes_returned, NULL, NULL))
-					return false;
-			}
-
-			const int result = acceptex_func
-			(
-				sListenSocket,
-				sAcceptSocket,
-				lpOutputBuffer,
-				dwReceiveDataLength,
-				dwLocalAddressLength,
-				dwRemoteAddressLength,
-				lpdwBytesReceived,
-				lpOverlapped
-			);
-
-			return result == TRUE || WSAGetLastError() == WSA_IO_PENDING;
-		}
-
 		bool server::_accept()
 		{
-			SOCKET accepted_socket = WSASocket(AF_INET, SOCK_STREAM, IPPROTO_TCP, nullptr, 0, WSA_FLAG_OVERLAPPED);
+			SOCKET client_socket = WSASocket(AF_INET, SOCK_STREAM, IPPROTO_TCP, nullptr, 0, WSA_FLAG_OVERLAPPED);
 
-			if (accepted_socket == INVALID_SOCKET)
+			if (client_socket == INVALID_SOCKET)
 			{
-				_set_error("Failed to create accepted socket");
+				_set_error("Failed to create client socket");
 				return false;
 			}
 
 			// disble send buffering
 			int opt = 0;
-			setsockopt(accepted_socket, SOL_SOCKET, SO_SNDBUF, (char*)&opt, sizeof(opt));
+			setsockopt(client_socket, SOL_SOCKET, SO_SNDBUF, (char*)&opt, sizeof(opt));
 
 			DWORD bytes = 0;
 
 			int id = m_connection_counter++;
 
-			std::shared_ptr<io_base::connection> conn(std::make_shared<io_base::connection>(accepted_socket, id));
+			std::shared_ptr<io_base::connection> conn(std::make_shared<io_base::connection>(client_socket, id));
 			conn->self_lock(conn);
 
-			const int accept_ex_result = wsa_acceptex
+			if (!wsa::AcceptEx
 			(
 				m_socket_accept.get_socket(),
-				accepted_socket,
+				client_socket,
 				conn->accept_overlapped.buffer,
 				0,
 				sizeof(sockaddr_in) + 16,
 				sizeof(sockaddr_in) + 16,
 				&bytes,
 				reinterpret_cast<LPOVERLAPPED>(&conn->accept_overlapped.overlapped)
-			);
-
-			if (!CreateIoCompletionPort(reinterpret_cast<HANDLE>(accepted_socket), m_iocp, static_cast<ULONG_PTR>(io_base::completion_key::io), 0))
+			))
 			{
-				_set_error("Failed to add accepted socket to iocp");
+				conn->self_unlock();
+				closesocket(client_socket);
+				_set_error("Failed to acceptex client socket");
 				return false;
 			}
 
+			if (!CreateIoCompletionPort(reinterpret_cast<HANDLE>(client_socket), m_iocp, static_cast<ULONG_PTR>(io_base::completion_key::io), 0))
 			{
-				std::lock_guard<std::mutex> lg(m_mut_v);
-				m_connections.push_back(std::move(conn));
+				conn->self_unlock();
+				closesocket(client_socket);
+				_set_error("Failed to add client socket to iocp");
+				return false;
 			}
+
+			m_connections.push_back(std::move(conn));
 
 			return true;
 		}
 
 		void server::_on_accept(io_base::i_connection* conn)
 		{
+			m_socket_accept.close();
+			//m_connections[0]->disconnect_async();
+			//wsa::DisconnectEx(m_socket_accept.get_socket(), )
 			{
 				std::lock_guard<std::mutex> lg(m_mut_v);
 				if (m_connections.size() < m_connection_max)

@@ -1,7 +1,8 @@
 #include "connection.h"
+#include "../wsa_ex/wsa_ex.h"
 
-#include <Ws2tcpip.h>
 #include <mswsock.h>
+#include <Ws2tcpip.h>
 
 namespace web
 {
@@ -90,43 +91,10 @@ namespace web
 			return true;
 		}
 
-		bool wsa_disconnectex(_In_ SOCKET s,
-			_Inout_opt_ LPOVERLAPPED lpOverlapped,
-			_In_ DWORD  dwFlags,
-			_In_ DWORD  dwReserved)
-		{
-			static LPFN_DISCONNECTEX disconnectex_func = nullptr;
-			if (!disconnectex_func)
-			{
-				GUID disconnectex_guid = WSAID_DISCONNECTEX;
-				DWORD bytes_returned;
-				if (WSAIoctl(s,
-					SIO_GET_EXTENSION_FUNCTION_POINTER,
-					&disconnectex_guid,
-					sizeof(disconnectex_guid),
-					&disconnectex_func,
-					sizeof(disconnectex_func),
-					&bytes_returned,
-					NULL,
-					NULL))
-					return false;
-			}
-
-			const int result = disconnectex_func
-			(
-				s,
-				lpOverlapped,
-				dwFlags,
-				dwReserved
-			);
-
-			return result == TRUE || WSAGetLastError() == WSA_IO_PENDING;
-		}
-
 		bool connection::disconnect_async()
 		{
 			DWORD bytes = 0;
-			return wsa_disconnectex
+			return wsa::DisconnectEx
 			(
 				m_socket.load(),
 				&disconnect_overlapped.overlapped,

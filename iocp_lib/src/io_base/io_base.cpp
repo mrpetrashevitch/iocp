@@ -24,6 +24,7 @@ namespace web
 
 		bool base::_accept_handler(connection* conn)
 		{
+			// GetAcceptExSockaddrs
 			conn->set_addr(*(sockaddr_in*)&conn->accept_overlapped.buffer[38]);
 
 			if (on_accepted)

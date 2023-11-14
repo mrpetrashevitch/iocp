@@ -157,6 +157,9 @@ int main()
 
 	int last = 0;
 
+	std::cin.get();
+	server->stop();
+
 	for (;;)
 	{
 		printf("Total connection: %d, total packets: %d (%d), total size %llu                     \r",

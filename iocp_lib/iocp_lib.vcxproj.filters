@@ -51,6 +51,9 @@
     <ClCompile Include="src\client\client_crater.cpp">
       <Filter>Исходные файлы</Filter>
     </ClCompile>
+    <ClCompile Include="src\wsa_ex\wsa_ex.cpp">
+      <Filter>Исходные файлы</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\connection\connection.h">
@@ -96,6 +99,9 @@
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
     <ClInclude Include="src\client\client_crater.h">
+      <Filter>Файлы заголовков</Filter>
+    </ClInclude>
+    <ClInclude Include="src\wsa_ex\wsa_ex.h">
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
   </ItemGroup>
