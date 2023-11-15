@@ -77,6 +77,7 @@ namespace web
 
 		public:
 			int m_id;
+			bool accepted;
 			std::atomic<SOCKET> m_socket;
 			SOCKADDR_IN m_addr;
 			std::string m_addr_str;

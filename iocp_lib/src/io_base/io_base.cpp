@@ -24,6 +24,7 @@ namespace web
 
 		bool base::_accept_handler(connection* conn)
 		{
+			conn->accepted = true;
 			// GetAcceptExSockaddrs
 			conn->set_addr(*(sockaddr_in*)&conn->accept_overlapped.buffer[38]);
 
@@ -37,6 +38,7 @@ namespace web
 
 		bool base::_connect_handler(connection* conn)
 		{
+			conn->accepted = true;
 			if (on_connected)
 				on_connected(conn);
 
@@ -107,7 +109,7 @@ namespace web
 			return true;
 		}
 
-		void base::_worker(std::atomic<int>& total_thread)
+		void base::_worker(HANDLE iocp, std::atomic<int>& total_thread)
 		{
 			total_thread++;
 			try
@@ -119,7 +121,7 @@ namespace web
 
 				while (42)
 				{
-					success = GetQueuedCompletionStatus(m_iocp, &bytes_transferred, &key, reinterpret_cast<LPOVERLAPPED*>(&overlapped), INFINITE);
+					success = GetQueuedCompletionStatus(iocp, &bytes_transferred, &key, reinterpret_cast<LPOVERLAPPED*>(&overlapped), INFINITE);
 
 					if (static_cast<completion_key>(key) == completion_key::shutdown)
 					{

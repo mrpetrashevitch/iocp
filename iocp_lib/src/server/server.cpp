@@ -14,7 +14,7 @@ namespace web
 	namespace io_server
 	{
 		server::server()
-			: m_state(server_state::stoped), m_error(false), m_connection_counter(0)
+			: m_state(server_state::stoped), m_error(false), m_connection_counter(0), m_iocp(nullptr)
 		{
 			if (!_wsa_init())
 				_set_error("Failed to init wsa");
@@ -25,6 +25,7 @@ namespace web
 
 		server::~server()
 		{
+			stop();
 		}
 
 		bool server::run(const char* addr, unsigned short port, int thread_max, int connection_max)
@@ -74,7 +75,7 @@ namespace web
 
 			for (size_t i = 0; i < m_thread_max; i++)
 			{
-				std::thread worker_thread(&server::_worker, this, std::ref(m_thread_working));
+				std::thread worker_thread(&server::_worker, this, m_iocp, std::ref(m_thread_working));
 				worker_thread.detach();
 			}
 
@@ -90,19 +91,41 @@ namespace web
 
 		void server::stop()
 		{
-			if (m_state == server_state::stoped || m_state == server_state::stoping)
+			auto state = m_state.exchange(server_state::stoping);
+			if (state == server_state::stoped || state == server_state::stoping)
 				return;
-
-			m_state = server_state::stoping;
 
 			m_socket_accept.close();
 
-			//m_connections[0]->disconnect_async();
+			{
+				std::lock_guard<std::mutex> lg(m_mut_v);
 
-			/*for (size_t i = 0; i < m_thread_max; i++)
+				for (auto& conn: m_connections)
+				{
+					conn->disconnect_async();
+				}
+			}
+
+			int total_conn;
+			do
+			{
+				std::this_thread::sleep_for(std::chrono::milliseconds(100));
+				std::lock_guard<std::mutex> lg(m_mut_v);
+				total_conn = (int)m_connections.size();
+			} while (total_conn > 0);
+
+			for (size_t i = 0; i < m_thread_max; i++)
 			{
 				PostQueuedCompletionStatus(m_iocp, 0, static_cast<ULONG_PTR>(io_base::completion_key::shutdown), nullptr);
-			}*/
+			}
+
+			do
+			{
+				std::this_thread::sleep_for(std::chrono::milliseconds(10));
+			} while (m_thread_working > 0);
+
+			
+
 		}
 
 		void server::set_on_accepted(callback::on_accepted callback)
@@ -174,15 +197,12 @@ namespace web
 
 		void server::_on_accept(io_base::i_connection* conn)
 		{
-			m_socket_accept.close();
-			//m_connections[0]->disconnect_async();
-			//wsa::DisconnectEx(m_socket_accept.get_socket(), )
+			//m_socket_accept.close();
 			{
 				std::lock_guard<std::mutex> lg(m_mut_v);
-				if (m_connections.size() < m_connection_max)
+				if (m_connections.size() < m_connection_max && m_state == server_state::runing)
 					_accept();
 			}
-
 			// only TCP
 			/*int opt_on = 1;
 			if (setsockopt(socket, SOL_SOCKET, SO_KEEPALIVE, (char*)&opt_on, sizeof(opt_on)) == SOCKET_ERROR) {
@@ -195,9 +215,7 @@ namespace web
 
 		void server::_on_disconnect(io_base::i_connection* conn)
 		{
-			if (m_on_disconnected)
-				m_on_disconnected(conn);
-
+			bool accepted = false;
 			{
 				std::lock_guard<std::mutex> lg(m_mut_v);
 				int use_accept = false;
@@ -206,13 +224,17 @@ namespace web
 				if (item != m_connections.end())
 				{
 					(*item)->self_unlock();
+					accepted = (*item)->accepted;
 					use_accept = m_connections.size() == m_connection_max;
 					m_connections.erase(item);
 				}
 
-				if (use_accept)
+				if (use_accept && m_state == server_state::runing)
 					_accept();
 			}
+
+			if (m_on_disconnected && accepted)
+				m_on_disconnected(conn);
 		}
 
 		void server::_set_error(const char* msg)

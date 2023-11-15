@@ -33,14 +33,13 @@ namespace web
 			m_connection = std::move(conn);
 		}
 
-		client::client()
+		client::client() : m_iocp(nullptr), m_inited(false)
 		{
 		}
 
 		client::~client()
 		{
 			m_inited = false;
-			m_threads.clear();
 			m_connection = nullptr;
 		}
 
@@ -56,24 +55,26 @@ namespace web
 
 			m_socket_connect.bind_before_connect();
 
-			/*for (int i = 0; i < thread_count; ++i)
+			for (int i = 0; i < thread_count; ++i)
 			{
-				std::unique_ptr<thread::thread> _worker_thread(std::make_unique<thread::thread>());
+				std::thread worker_thread(&client::_worker, this, m_iocp, std::ref(m_thread_working));
+				worker_thread.detach();
+
+				/*std::unique_ptr<thread::thread> _worker_thread(std::make_unique<thread::thread>());
 				_worker_thread->set_func(std::bind(&client::_worker, this));
 				_worker_thread->set_exit([this]
 					{
 						PostQueuedCompletionStatus(m_iocp, 0, static_cast<ULONG_PTR>(io_base::completion_key::shutdown), nullptr);
 					}
 				);
-				m_threads.push_back(std::move(_worker_thread));
-			}*/
+				m_threads.push_back(std::move(_worker_thread));*/
+			}
 			m_inited = true;
 		}
 
 		void client::run()
 		{
 			if (!m_inited) return;
-			for (auto& i : m_threads) i->run();
 			_connect();
 		}
 

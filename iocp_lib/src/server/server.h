@@ -9,7 +9,7 @@ namespace web
 {
 	namespace io_server
 	{
-		enum class server_state
+		enum class server_state : char
 		{
 			stoped,
 			runing,
@@ -30,10 +30,12 @@ namespace web
 			void set_on_disconnected(callback::on_disconnected callback) override;
 
 		private:
-			server_state m_state;
+			std::atomic<server_state> m_state;
 			bool m_error;
 			std::mutex m_error_msg_lock;
 			std::string m_error_msgs;
+
+			HANDLE m_iocp;
 
 			std::atomic<int> m_connection_counter;
 			io_base::socket m_socket_accept;

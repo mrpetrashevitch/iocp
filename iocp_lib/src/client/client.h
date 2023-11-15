@@ -25,9 +25,11 @@ namespace web
 			void set_on_disconnected(callback::on_disconnected callback) override;
 
 		private:
-			bool m_inited = false;
+			bool m_inited;
+			HANDLE m_iocp;
+			int m_thread_max;
+			std::atomic<int> m_thread_working;
 			io_base::socket m_socket_connect;
-			std::vector<std::unique_ptr<thread::thread>> m_threads;
 			std::shared_ptr<io_base::connection> m_connection;
 
 		private:

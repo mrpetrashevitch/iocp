@@ -11,6 +11,7 @@ namespace web
 		connection::connection(SOCKET socket, int id)
 		{
 			m_id = id;
+			accepted = false;
 			ZeroMemory(&m_addr, sizeof(m_addr));
 			m_socket = socket;
 			accept_overlapped.conn = this;
