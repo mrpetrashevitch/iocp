@@ -124,8 +124,8 @@ namespace web
 				std::this_thread::sleep_for(std::chrono::milliseconds(10));
 			} while (m_thread_working > 0);
 
-			
-
+			CloseHandle(m_iocp);
+			m_iocp = nullptr;
 		}
 
 		void server::set_on_accepted(callback::on_accepted callback)
