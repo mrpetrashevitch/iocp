@@ -14,8 +14,7 @@ namespace web
 			client();
 			~client();
 
-			void init(const char* addr, unsigned short port);
-			void run() override;
+			void run(const char* addr, unsigned short port, int thread_max) override;
 
 			bool send_async(const void* data, int size) override;
 			bool disconnect_async() override;
@@ -25,7 +24,6 @@ namespace web
 			void set_on_disconnected(callback::on_disconnected callback) override;
 
 		private:
-			bool m_inited;
 			HANDLE m_iocp;
 			int m_thread_max;
 			std::atomic<int> m_thread_working;

@@ -11,9 +11,8 @@ namespace web
 	{
 		enum class server_state : char
 		{
-			stoped,
-			runing,
-			stoping
+			stopped,
+			running
 		};
 
 
@@ -30,7 +29,7 @@ namespace web
 			void set_on_disconnected(callback::on_disconnected callback) override;
 
 		private:
-			std::atomic<server_state> m_state;
+			server_state m_state;
 			bool m_error;
 			std::mutex m_error_msg_lock;
 			std::string m_error_msgs;

@@ -8,7 +8,7 @@ namespace web
 		struct i_client
 		{
 			virtual ~i_client() {};
-			virtual void run() = 0;
+			virtual void run(const char* addr, unsigned short port, int thread_max) = 0;
 
 			virtual bool send_async(const void* data, int size) = 0;
 			virtual bool disconnect_async() = 0;

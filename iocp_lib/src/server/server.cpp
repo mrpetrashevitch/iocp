@@ -14,7 +14,7 @@ namespace web
 	namespace io_server
 	{
 		server::server()
-			: m_state(server_state::stoped), m_error(false), m_connection_counter(0), m_iocp(nullptr)
+			: m_state(server_state::stopped), m_error(false), m_connection_counter(0), m_iocp(nullptr)
 		{
 			if (!_wsa_init())
 				_set_error("Failed to init wsa");
@@ -42,7 +42,7 @@ namespace web
 
 			m_iocp = ::CreateIoCompletionPort(INVALID_HANDLE_VALUE, nullptr, 0, m_thread_max);
 			if (m_iocp == 0)
-			{ 
+			{
 				_set_error("Failed to create io completion port");
 				return false;
 			}
@@ -71,7 +71,7 @@ namespace web
 				return false;
 			}
 
-			m_state = server_state::runing;
+			m_state = server_state::running;
 
 			for (size_t i = 0; i < m_thread_max; i++)
 			{
@@ -91,16 +91,14 @@ namespace web
 
 		void server::stop()
 		{
-			auto state = m_state.exchange(server_state::stoping);
-			if (state == server_state::stoped || state == server_state::stoping)
-				return;
-
-			m_socket_accept.close();
-
 			{
 				std::lock_guard<std::mutex> lg(m_mut_v);
+				if (m_state == server_state::stopped)
+					return;
 
-				for (auto& conn: m_connections)
+				m_state = server_state::stopped;
+				m_socket_accept.close();
+				for (auto& conn : m_connections)
 				{
 					conn->disconnect_async();
 				}
@@ -200,7 +198,7 @@ namespace web
 			//m_socket_accept.close();
 			{
 				std::lock_guard<std::mutex> lg(m_mut_v);
-				if (m_connections.size() < m_connection_max && m_state == server_state::runing)
+				if (m_connections.size() < m_connection_max && m_state == server_state::running)
 					_accept();
 			}
 			// only TCP
@@ -229,7 +227,7 @@ namespace web
 					m_connections.erase(item);
 				}
 
-				if (use_accept && m_state == server_state::runing)
+				if (use_accept && m_state == server_state::running)
 					_accept();
 			}
 
