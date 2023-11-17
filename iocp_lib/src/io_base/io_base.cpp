@@ -76,6 +76,9 @@ namespace web
 				if (on_recv)
 					size = on_recv(conn, buff, size);
 
+				if (size == 0)
+					break;
+
 				if (!over.buffer.add_total_read(size)) break;
 			}
 

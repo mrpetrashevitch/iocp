@@ -4,8 +4,10 @@
 #include <vector>
 #include <mutex>
 #include <atomic>
+#include <unordered_map>
 
 #include "../../iocp_server/src/include.h"
+#include "../../packet.h"
 #pragma warning(disable : 4996)
 
 std::mutex mut_cout;
@@ -26,86 +28,101 @@ std::atomic<int> total_pack = 0;
 std::atomic<unsigned long long> total_size = 0;
 std::atomic<int> total_conn = 0;
 
+std::mutex mut;
+std::unordered_map<int, std::shared_ptr<unsigned long long>> map;
+
 void fn_on_accepted(web::io_base::i_connection* conn)
 {
+	{
+		std::lock_guard gl(mut);
+		map.insert(std::pair(conn->get_id(), std::make_shared<unsigned long long>(0)));
+	}
+
 	total_conn++;
-	/*{
-		std::lock_guard<std::mutex> lg(mut_cout);
-		std::cout << current_date_time() << " on_accepted: socket " << socket << std::endl;
-	}*/
 
 	std::string str("[user");
 	str += std::to_string(conn->get_id());
 	str += "] has been connected";
 
-	//std::shared_ptr<web::packet::packet_str> p(std::make_unique<web::packet::packet_str>(str.c_str()));
-
 	{
 		std::lock_guard<std::recursive_mutex> lg(mut_conn);
 		_connestions.push_back(conn);
 	}
-
-	/*web::io_server::i_server* server = reinterpret_cast<web::io_server::i_server*>(conn->get_owner());
-	{
-		std::lock_guard<std::recursive_mutex> lg(mut_conn);
-		for (auto& i : _connestions)
-			if (i->get_socket() != socket)
-				server->send(i, p);
-	}*/
 }
 
 int fn_on_recv(web::io_base::i_connection* conn, const void* data, int size)
 {
-	total_pack++;
-	total_size += size;
+	if (size < sizeof(packet_header))
+		return 0;
+
+	packet_header* ph = (packet_header*)data;
+
+	if (ph->size > size)
+		return 0;
+
+	std::shared_ptr<unsigned long long> hash = nullptr;
+	{
+		std::lock_guard gl(mut);
+		hash = map.at(conn->get_id());
+	}
+
+	if (!hash)
+	{
+		printf("hash is empty!!!!!!!");
+	}
+
+	switch (ph->type)
+	{
+	case packet_type::reset:
+		(*hash) = 0;
+		break;
+	case packet_type::add:
+		for (size_t i = sizeof(packet_header); i < ph->size; i++)
+		{
+			(*hash) += ((char*)data)[i];
+		}
+		break;
+	case packet_type::sub:
+		for (size_t i = sizeof(packet_header); i < ph->size; i++)
+		{
+			(*hash) -= ((char*)data)[i];
+		}
+		break;
+	case packet_type::get:
+	{
+		packet_header p{
+			.size = sizeof(packet_header) + sizeof((*hash)),
+			.type = packet_type::get
+		};
+		conn->send_async(&p, sizeof(p));
+		conn->send_async(hash.get(), sizeof(*hash));
+	}
+	break;
+	default:
+		break;
+	}
 
 	//server->detach(conn);
-	auto s = total_size.load();
+	//auto s = total_size.load();
 
-	conn->send_async(&s, sizeof(s));
+	//conn->send_async(&s, sizeof(s));
 	//conn->close();
-	Sleep(1000);
-	conn->disconnect_async();
+	//Sleep(1000);
+	//conn->disconnect_async();
 
-
-	//SOCKET sock = conn->get_socket();
-	/*{
-		std::lock_guard<std::mutex> lg(mut_cout);
-		std::cout << current_date_time() << " on_recved from " << sock << ": size " << packet->size << std::endl;
-	}*/
-
-	/*if (web::packet::get_packet_type(packet_nt) == web::packet::packet_type::packet_str)
-	{
-		auto packet = web::packet::packet_cast<web::packet::packet_str>(packet_nt);
-		std::cout << current_date_time() << " " << packet->str << std::endl;
-	}*/
-
-	/*if (packet->packet.type == web::web_base::packet_type::str)
-	{
-		std::string str("[user");
-		str += std::to_string(sock);
-		str += "]: ";
-		str += (const char*)packet->packet.body;
-
-		std::shared_ptr<web::web_base::packet_str> p(std::make_shared<web::web_base::packet_str>(str.c_str()));
-		web::web_server::i_server* server = reinterpret_cast<web::web_server::i_server*>(conn->get_owner());
-		{
-			std::lock_guard<std::recursive_mutex> lg(mut_conn);
-			for (auto& i : _connestions)
-				server->send(i, p);
-		}
-	}*/
-
-	return size;
+	total_pack++;
+	total_size += ph->size;
+	return ph->size;
 }
 
 void fn_on_disconnected(web::io_base::i_connection* conn)
 {
+	{
+		std::lock_guard gl(mut);
+		map.erase(conn->get_id());
+	}
+
 	total_conn--;
-	/*{
-		std::lock_guard<std::mutex> lg(mut_cout);
-		std::cout << current_date_time() << " on_disconnected: socket " << conn->get_socket() << std::endl;
-	}*/
 
 	std::string str("[user");
 	str += std::to_string(conn->get_id());
@@ -117,28 +134,8 @@ void fn_on_disconnected(web::io_base::i_connection* conn)
 		auto item = std::find_if(_connestions.begin(), _connestions.end(), [&conn](web::io_base::i_connection* c) { return c->get_id() == conn->get_id(); });
 		if (item != _connestions.end())
 			_connestions.erase(item);
-
-		/*for (auto& i : _connestions)
-			if (i->get_socket() != conn->get_socket())
-			{
-				server->send(i, p);
-			}*/
 	}
 }
-
-void Clear()
-{
-#if defined _WIN32
-	system("cls");
-	//clrscr(); // including header file : conio.h
-#elif defined (__LINUX__) || defined(__gnu_linux__) || defined(__linux__)
-	system("clear");
-	//std::cout<< u8"\033[2J\033[1;1H"; //Using ANSI Escape Sequences 
-#elif defined (__APPLE__)
-	system("clear");
-#endif
-}
-
 
 int main()
 {
@@ -157,9 +154,6 @@ int main()
 
 	int last = 0;
 
-	std::cin.get();
-	server->stop();
-
 	for (;;)
 	{
 		printf("Total connection: %d, total packets: %d (%d), total size %llu                     \r",
@@ -167,6 +161,8 @@ int main()
 		last = total_pack;
 		Sleep(1000);
 	}
+	std::cin.get();
+	server->stop();
 
 	std::cin.get();
 	return 0;

@@ -14,7 +14,7 @@ namespace web
 	namespace io_server
 	{
 		server::server()
-			: m_state(server_state::stopped), m_error(false), m_connection_counter(0), m_iocp(nullptr)
+			: m_state(server_state::stopped), m_error(false), m_connection_counter(0), m_iocp(nullptr), m_connection_max(0)
 		{
 			if (!_wsa_init())
 				_set_error("Failed to init wsa");

@@ -7,8 +7,7 @@ namespace web
 	{
 		std::shared_ptr<i_server> server_crater::create()
 		{
-			std::shared_ptr<server> s = std::make_shared<server>();
-			return s;
+			return std::make_shared<server>();
 		}
 	}
 }

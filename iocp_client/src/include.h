@@ -6,7 +6,7 @@ namespace web
 {
 	namespace io_client
 	{
-		typedef void (*create)(const char* addr, unsigned short port, std::shared_ptr<web::io_client::i_client>& out_client);
+		typedef void (*create)(std::shared_ptr<web::io_client::i_client>& out_client);
 
 		class web_client_dll_loader
 		{

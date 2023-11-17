@@ -8,7 +8,7 @@ namespace web
 	{
 		struct client_crater
 		{
-			static std::shared_ptr<i_client> create(const char* addr, unsigned short port);
+			static std::shared_ptr<i_client> create();
 		};
 	}
 }

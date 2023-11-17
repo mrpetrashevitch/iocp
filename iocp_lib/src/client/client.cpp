@@ -13,7 +13,7 @@ namespace web
 	namespace io_client
 	{
 		
-		client::client() : m_iocp(nullptr)
+		client::client() : m_iocp(nullptr), m_thread_max(0)
 		{
 			_wsa_init();
 		}
@@ -44,16 +44,13 @@ namespace web
 			_connect();
 		}
 
-		bool client::send_async(const void* data, int size)
+		void client::stop()
 		{
-			if (!m_connection) return false;
-			return m_connection->send_async(data, size);
 		}
 
-		bool client::disconnect_async()
+		const std::shared_ptr<io_base::i_connection>& client::get_connection()
 		{
-			if (!m_connection) return false;
-			return m_connection->disconnect_async();
+			return m_connection;
 		}
 
 		void client::set_on_connected(callback::on_connected callback)

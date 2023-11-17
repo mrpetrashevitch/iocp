@@ -15,9 +15,8 @@ namespace web
 			~client();
 
 			void run(const char* addr, unsigned short port, int thread_max) override;
-
-			bool send_async(const void* data, int size) override;
-			bool disconnect_async() override;
+			void stop() override;
+			const std::shared_ptr<io_base::i_connection>& get_connection() override;
 
 			void set_on_connected(callback::on_connected callback) override;
 			void set_on_recv(callback::on_recv callback) override;
